@@ -35,6 +35,16 @@ db.exec(`
     titles_json TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS generation_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    trend_title TEXT,
+    product_type TEXT,
+    prompts_json TEXT,
+    tags_json TEXT,
+    titles_json TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 module.exports = db;

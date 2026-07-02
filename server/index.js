@@ -194,7 +194,21 @@ app.post('/api/generate-prompts', async (req, res) => {
       };
     }
     
-    // Prompt auto-save removed; user must manually save the package.
+    // Auto-log every generated package to History (distinct from manually-saved packages).
+    try {
+      db.prepare(
+        'INSERT INTO generation_history (trend_title, product_type, prompts_json, tags_json, titles_json) VALUES (?, ?, ?, ?, ?)'
+      ).run(
+        title,
+        productType,
+        JSON.stringify(generatedData.prompts),
+        JSON.stringify(generatedData.tags),
+        JSON.stringify(generatedData.titles)
+      );
+    } catch (logErr) {
+      console.warn('Failed to log generation to history:', logErr.message);
+    }
+
     res.json(generatedData);
   } catch (error) {
     console.error('Gemini Generation Error:', error);
@@ -239,6 +253,31 @@ app.delete('/api/favorite-packages/:id', (req, res) => {
   }
 });
 
+// 3b. Generation History (auto-logged on every generate-prompts call)
+app.get('/api/history', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM generation_history ORDER BY created_at DESC LIMIT 100').all();
+    const parsed = rows.map(r => ({
+      ...r,
+      prompts: JSON.parse(r.prompts_json),
+      tags: JSON.parse(r.tags_json),
+      titles: JSON.parse(r.titles_json)
+    }));
+    res.json(parsed);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+app.delete('/api/history/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM generation_history WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove history entry' });
+  }
+});
+
 // 4. Favorites (Niches)
 app.get('/api/favorites', (req, res) => {
   try {
@@ -272,33 +311,6 @@ app.delete('/api/favorites/:title', (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to remove favorite' });
-  }
-});
-
-// 5. Image Proxy (Bypass client adblockers)
-app.get('/api/preview-image', async (req, res) => {
-  try {
-    const prompt = req.query.prompt;
-    if (!prompt) return res.status(400).send('No prompt provided');
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
-    console.log(`[Proxy] Fetching: ${imageUrl}`);
-    
-    let response = await fetch(imageUrl);
-    if (!response.ok) {
-      console.warn(`[Proxy] Pollinations API Error: ${response.status} ${response.statusText}. Using fallback placeholder.`);
-      response = await fetch('https://placehold.co/512x512/1e293b/8b5cf6/png?text=AI+Preview+Unavailable');
-    }
-    
-    // Pass along whatever content type the successful fetch gave us (jpeg or png)
-    res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=31536000');
-    
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    res.send(buffer);
-  } catch (error) {
-    console.error('[Proxy] Image Proxy Error:', error);
-    res.status(500).send('Error loading preview');
   }
 });
 
