@@ -50,3 +50,35 @@ This document serves as the project tracker, history, and roadmap for ImagePulse
 - **Official USPTO Integration:** For a fully public release, the AI search-grounded filter should be augmented with an official trademark API (like MarkerAPI or the USPTO Open Data Portal) to guarantee legal safety for users.
 - **User Authentication:** Add user accounts so sellers can manage their own private prompt libraries across devices.
 - **Cloud Database:** Migrate from local SQLite to a hosted database (like Supabase or PostgreSQL) for deployment.
+
+---
+
+## 🧭 Product Direction & Competitive Notes (added 2026-07-02)
+
+### Reference point: Trend2Design (trend2designs.com)
+The idea seed. A done-for-you daily trend feed sold as a $25 one-time deal (positioned against a $99/mo "real" price) through a Whop checkout, bundled with a free 4-hour Etsy-selling course. The model is passive: they mine "daily search data," hand the user one copy-paste AI prompt per trend, and the user lists the result for sale.
+- Push feed, not interactive. No seed input, no niche targeting.
+- One prompt per trend. No SEO tags, no titles, no product-type variants.
+- "Real search data" is claimed but the source is unnamed (likely Google Trends).
+- Generator-agnostic (Midjourney, DALL-E, ChatGPT, Nano Banana).
+- Testimonials read as manufactured. Treated as marketing theater, not signal.
+- Sourced from a working POD YouTube creator (a real earner). Possible future outreach / affiliate contact (free trial for promotion). Speculative, parked.
+
+### Where ImagePulse already leads
+- Full package (3 prompts + 13 Etsy tags + 2 titles), product-type tailored, vs one bare prompt.
+- A grounded trademark / IP safety gate (Trend2Design only hand-waves legal risk in an FAQ).
+- Interactive seed-to-niche generation.
+- A curation layer that filters the news/sports/tragedy noise raw search feeds are full of.
+
+### Direction decisions (Red, 2026-07-02)
+1. **No fabricated data.** The current `searchVolume` / `competition` fields are invented by Gemini and must be replaced with real numbers or removed. Honesty is a hard requirement and the main differentiator vs Trend2Design's unverifiable "data-backed" claim.
+2. **Real data sourcing under evaluation.** Candidates: SERP APIs (ClearSERP is Red's lead idea; also SerpApi, DataForSEO, ScaleSERP), Etsy-native keyword tools (Everbee, eRank, Sale Samurai, Marmalead), and official Google Trends (rising-signal only, not the backbone). Recommended shape: a real data source supplies the demand numbers; Gemini stays as the curation/synthesis layer that names micro-niches and writes prompts, but never invents figures. Open question: how much of the sourcing method to disclose publicly. Working answer: be transparent that the data is real, keep the specific vendor private (normal practice; protects the supply chain).
+3. **Generator-agnostic output.** Do not hard-code Midjourney / DALL-E. Prompts should suit any text-to-image tool (Nano Banana, ChatGPT / GPT image, Ideogram, SDXL, Midjourney, etc.). Antigravity narrowed this without reason.
+4. **New feature: negative-prompt generator.** A button that produces a negative prompt (things to exclude). The user first enters style / inspiration / notes into a text box, and the negative prompt is generated to counter that specific context rather than a generic exclusion list.
+5. **"What's hot today" daily feed, done cost-effectively.** Today the niche generator runs a live Gemini call on every reload, which is not cost-effective. Precompute a daily curated feed on a schedule and cache it, rather than paying per page load. Live/on-demand generation stays available and is a candidate for a paid tier.
+6. **Productization is the plan (not yet started).** Auth, hosted DB (Supabase / Postgres), deployment, and pricing all still to work out. Currently a localhost dev tool.
+
+### Origin note
+Started as a tool for Red's own POD work, then reframed as a sellable product after seeing the $25 lifetime Trend2Design offer and judging it beatable.
+
+_Competitor landscape research (how many similar tools exist, features, pricing) is being compiled separately and will be linked here._
