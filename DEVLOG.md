@@ -81,4 +81,8 @@ The idea seed. A done-for-you daily trend feed sold as a $25 one-time deal (posi
 ### Origin note
 Started as a tool for Red's own POD work, then reframed as a sellable product after seeing the $25 lifetime Trend2Design offer and judging it beatable.
 
-_Competitor landscape research (how many similar tools exist, features, pricing) is being compiled separately and will be linked here._
+### Competitor landscape
+See [`research/competitor-landscape.md`](research/competitor-landscape.md) for the full scan (24 tools compared; pricing verified against vendor sites where possible, unverified/contested entries flagged). Headline findings:
+- Roughly 15-30 tools fit the strict "trend feed to AI prompt" definition; only 4-6 are truly direct matches to Trend2Design/ImagePulse. The broader "trend research + AI generation for POD" category is 40-70+ products.
+- No established Etsy research tool (eRank, EverBee, Marmalead, Sale Samurai, EtsyHunt, Alura, Koalanda, Crest) generates AI image prompts. The clones do prompts but lack data/SEO/safety; the generators do images but lack trend data. The full chain (real demand data -> curated micro-niche -> AI prompt -> full SEO package -> trademark safety -> generator-agnostic output) is open white space, and ImagePulse already covers most of it.
+- On data: every vendor hides its sourcing, and Etsy's API does not expose real sales, so even the honest tools estimate demand (EverBee self-reports ~80%). Real, disclosed-estimate data beats Trend2Design's undisclosed claim.
