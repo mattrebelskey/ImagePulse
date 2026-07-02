@@ -56,19 +56,23 @@ This document serves as the project tracker, history, and roadmap for ImagePulse
 ## 🧭 Product Direction & Competitive Notes (added 2026-07-02)
 
 ### Reference point: Trend2Design (trend2designs.com)
-The idea seed. A done-for-you daily trend feed sold as a $25 one-time deal (positioned against a $99/mo "real" price) through a Whop checkout, bundled with a free 4-hour Etsy-selling course. The model is passive: they mine "daily search data," hand the user one copy-paste AI prompt per trend, and the user lists the result for sale.
-- Push feed, not interactive. No seed input, no niche targeting.
-- One prompt per trend. No SEO tags, no titles, no product-type variants.
-- "Real search data" is claimed but the source is unnamed (likely Google Trends).
-- Generator-agnostic (Midjourney, DALL-E, ChatGPT, Nano Banana).
+The idea seed. Sold as a $25 one-time deal (positioned against a $99/mo "real" price) through a Whop checkout, bundled with a free 4-hour Etsy-selling course. The user searches a seed (or clicks a trending chip) and T2D returns a feed of niche ideas with copy-paste AI prompts to paste into a generator and sell.
+
+**Dashboard reality (corrected 2026-07-02 from actual screenshots; the earlier landing-page-only read understated it):**
+- It IS interactive: a search bar ("Try 'boho wedding' or 'Halloween cats'") plus "trending today" chips.
+- Per search it returns a "Trend snapshot" (a short paragraph on WHY the trend is rising, plus sub-aesthetic chips), then **10 niche ideas, each with a "For:" buyer persona and 3 prompt angles**. Each prompt shows a per-prompt search-volume estimate (e.g. ~18K/mo) and a Copy button; each niche has a Save button. So it does multi-prompt and shows volume, not "one bare prompt."
+- What it still lacks: no Etsy SEO tag/title package, no trademark safety gate, no product-type targeting, no per-generator prompt tailoring.
+- The ~Xk/mo volume numbers are shown per prompt but the source is undisclosed and almost certainly LLM-estimated, the same fabrication risk as ImagePulse's current fields. This is the real soft spot.
+- Full end-to-end workflow (from Red's screenshots): T2D prompt -> paste into Kittl ("Nano Banana 2" model) -> transparent-PNG clipart -> vectorize/upscale/mockup. ImagePulse slots in at the prompt step.
 - Testimonials read as manufactured. Treated as marketing theater, not signal.
 - Sourced from a working POD YouTube creator (a real earner). Possible future outreach / affiliate contact (free trial for promotion). Speculative, parked.
 
-### Where ImagePulse already leads
-- Full package (3 prompts + 13 Etsy tags + 2 titles), product-type tailored, vs one bare prompt.
-- A grounded trademark / IP safety gate (Trend2Design only hand-waves legal risk in an FAQ).
-- Interactive seed-to-niche generation.
+### Where ImagePulse already leads (honest, narrowed after seeing the T2D dashboard)
+- Full SEO package: 13 Etsy tags + 2 optimized titles, product-type tailored. T2D shows 3 prompts per niche too (so prompts alone are not the edge), but has no tag/title package and no product-type targeting.
+- A grounded trademark / IP safety gate. T2D has none (only an FAQ hand-wave).
+- **Real, honest data is the wedge.** T2D shows volume numbers but they are almost certainly fabricated; committing to real, disclosed-estimate data is the differentiator (see direction #1-2).
 - A curation layer that filters the news/sports/tragedy noise raw search feeds are full of.
+- Planned edges T2D lacks: per-generator prompt tailoring (#7) and a negative-prompt generator (#4).
 
 ### Direction decisions (Red, 2026-07-02)
 1. **No fabricated data.** The current `searchVolume` / `competition` fields are invented by Gemini and must be replaced with real numbers or removed. Honesty is a hard requirement and the main differentiator vs Trend2Design's unverifiable "data-backed" claim.
@@ -77,6 +81,7 @@ The idea seed. A done-for-you daily trend feed sold as a $25 one-time deal (posi
 4. **New feature: negative-prompt generator.** A button that produces a negative prompt (things to exclude). The user first enters style / inspiration / notes into a text box, and the negative prompt is generated to counter that specific context rather than a generic exclusion list.
 5. **"What's hot today" daily feed, done cost-effectively.** Today the niche generator runs a live Gemini call on every reload, which is not cost-effective. Precompute a daily curated feed on a schedule and cache it, rather than paying per page load. Live/on-demand generation stays available and is a candidate for a paid tier.
 6. **Productization is the plan (not yet started).** Auth, hosted DB (Supabase / Postgres), deployment, and pricing all still to work out. Currently a localhost dev tool.
+7. **Per-generator prompt selector (Red, 2026-07-02).** Beyond generator-agnostic defaults, add a selector for the target generator (Midjourney, DALL-E / ChatGPT, Nano Banana / Kittl, Ideogram, SDXL, etc.) that tailors the prompt syntax to that tool: Midjourney flags (`--ar`, `--v`, `::` weights), plain-sentence phrasing for DALL-E, explicit "transparent background, 300 dpi" for clipart tools like Kittl/Nano Banana, and a separate negative prompt for SDXL. Pairs with the negative-prompt feature (#4). Build on the image-prompting best-practices already captured in the Vault rather than from scratch.
 
 ### Origin note
 Started as a tool for Red's own POD work, then reframed as a sellable product after seeing the $25 lifetime Trend2Design offer and judging it beatable.
