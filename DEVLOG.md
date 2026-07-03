@@ -37,13 +37,18 @@ This document serves as the project tracker, history, and roadmap for ImagePulse
 - **Fixed the broken History tab:** History was calling a `/api/saved-prompts` endpoint that did not exist (always returned 404) and read from a `prompts` table that stopped being written after Phase 6, so it always showed empty. History is now an **auto-captured log of every generated package** (title, product type, prompts, tags, titles, timestamp), backed by a new `generation_history` table and a `GET /api/history` endpoint (plus `DELETE /api/history/:id`). This is intentionally distinct from the manual "Saved Packages" favorites tab: History records everything you generate, saved or not.
 - **Dropped dead dependencies:** Removed `google-trends-api` and `rss-parser` from `server/package.json`. Both were unused since the Phase 5 pivot away from RSS feeds.
 
+### Phase 8: Honest Data + Prompt Controls (Claude Code)
+- **Killed the fabricated demand data (direction #1).** Removed the LLM-invented `searchVolume` and `competition` fields entirely: dropped from the `/api/trends` curator prompt (and replaced with an explicit "do NOT invent search volume, demand, popularity, or competition numbers" guardrail), from both server-side fallback arrays (no-key + offline), and from the `TrendCard` UI (the whole metrics row and its now-unused `Activity`/`Search` icon imports). Verified live: `GET /api/trends` now returns only `id`, `title`, `category`, `keywords`. Real, sourced demand data is still a separate open direction (#2); until it exists the app shows none rather than a fake number.
+- **Negative-prompt generator (direction #4).** New `POST /api/negative-prompt` endpoint takes free-text style/inspiration/notes (plus the niche title and selected art style for context) and returns a single comma-separated negative prompt tailored to counter that specific context, not a generic exclusion list (pro→flash fallback; no fake canned output). Surfaced as a "Negative Prompt Helper" section in `PromptGenerator` (textarea + button + copyable result), shown for live niches only.
+- **Art-style picker (direction, roadmap "Prompt Style Customization").** Added an Art Style dropdown to `PromptGenerator` (Watercolor, Vintage/Retro, Minimalist Vector, Cyberpunk, Line Art, Cartoon/Kawaii, Hand-drawn Sketch, Bold Typography, Boho/Cottagecore, Grunge/Distressed, Art Deco; default "No specific style"). The chosen style is sent to `/api/generate-prompts` as `style` and folded into the generation instructions so every prompt is rendered in that style. Verified live: same niche generated with vs without "Cyberpunk" produced dramatically different prompts (neon/holographic/synthwave + `--ar` flags vs cozy vector). Not persisted to `generation_history` (no schema change).
+
 ---
 
 ## 🗺️ Roadmap & Future Plans
 
 ### Short-Term
 - **Firecrawl Integration (Data Ingestion):** Build a data pipeline using a free Firecrawl account (1000 scrapes/month) to scrape specific Etsy bestseller pages or Pinterest boards, feeding real-time market data into the AI Niche Generator.
-- **Prompt Style Customization:** Allow the user to select specific art styles (e.g., "Watercolor", "Cyberpunk", "Minimalist Vector") before clicking generate.
+- ~~**Prompt Style Customization:** Allow the user to select specific art styles (e.g., "Watercolor", "Cyberpunk", "Minimalist Vector") before clicking generate.~~ **Done in Phase 8.**
 
 ### Long-Term (Production Viability)
 - **Official API Integrations:** Move away from scraping RSS feeds. Integrate with official, paid trend APIs (like DataForSEO or Glimpse) to get thousands of long-tail keywords rather than just the top 20 viral news trends.

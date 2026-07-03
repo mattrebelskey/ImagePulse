@@ -1,8 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Copy, Wand2, X, CheckCircle2, Tags, Type, Image as ImageIcon } from 'lucide-react';
+import { Copy, Wand2, X, CheckCircle2, Tags, Type, Image as ImageIcon, Palette, Ban } from 'lucide-react';
+
+const ART_STYLES = [
+  'Watercolor',
+  'Vintage / Retro',
+  'Minimalist Vector',
+  'Cyberpunk',
+  'Line Art',
+  'Cartoon / Kawaii',
+  'Hand-drawn Sketch',
+  'Bold Typography',
+  'Boho / Cottagecore',
+  'Grunge / Distressed',
+  'Art Deco',
+];
 
 export function PromptGenerator({ trend, onClose, initialData }) {
   const [productType, setProductType] = useState(initialData?.product_type || 'T-Shirt');
+  const [artStyle, setArtStyle] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState(initialData || null);
   const [copiedIndex, setCopiedIndex] = useState(null);
@@ -11,6 +26,13 @@ export function PromptGenerator({ trend, onClose, initialData }) {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Negative-prompt helper (independent of the main package generation)
+  const [negContext, setNegContext] = useState('');
+  const [negPrompt, setNegPrompt] = useState('');
+  const [isGeneratingNeg, setIsGeneratingNeg] = useState(false);
+  const [negError, setNegError] = useState(null);
+  const [copiedNeg, setCopiedNeg] = useState(false);
 
   useEffect(() => {
     setGeneratedData(initialData || null);
@@ -32,7 +54,8 @@ export function PromptGenerator({ trend, onClose, initialData }) {
         body: JSON.stringify({
           title: trend.title,
           keywords: trend.keywords,
-          productType
+          productType,
+          style: artStyle
         })
       });
       
@@ -88,6 +111,33 @@ export function PromptGenerator({ trend, onClose, initialData }) {
     setIsSaving(false);
   };
 
+  const generateNegativePrompt = async () => {
+    if (!negContext.trim()) return;
+    setNegError(null);
+    setIsGeneratingNeg(true);
+    try {
+      const res = await fetch('http://localhost:3000/api/negative-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          context: negContext,
+          title: trend.title,
+          style: artStyle
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to generate negative prompt');
+      }
+      setNegPrompt(data.negativePrompt);
+    } catch (err) {
+      console.error(err);
+      setNegError(err.message || 'Failed to generate negative prompt.');
+    } finally {
+      setIsGeneratingNeg(false);
+    }
+  };
+
   return (
     <div className="glass-panel" style={{ position: 'relative' }}>
       <button 
@@ -109,7 +159,7 @@ export function PromptGenerator({ trend, onClose, initialData }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Target Product Type:</label>
-            <select 
+            <select
               value={productType}
               onChange={(e) => setProductType(e.target.value)}
               className="input-field"
@@ -120,6 +170,23 @@ export function PromptGenerator({ trend, onClose, initialData }) {
               <option value="Wall Art">Wall Art / Poster</option>
               <option value="Tumbler">Tumbler Wrap</option>
               <option value="Sticker">Die-Cut Sticker</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Palette size={14} /> Art Style:
+            </label>
+            <select
+              value={artStyle}
+              onChange={(e) => setArtStyle(e.target.value)}
+              className="input-field"
+              style={{ padding: '0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              <option value="">No specific style (let the niche decide)</option>
+              {ART_STYLES.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
             </select>
           </div>
 
@@ -249,6 +316,47 @@ export function PromptGenerator({ trend, onClose, initialData }) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {!initialData && (
+        <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-secondary)', fontSize: '0.95rem', fontWeight: 600 }}>
+            <Ban size={16} /> Negative Prompt Helper
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+            Describe your style, inspiration, or notes. The negative prompt is tailored to counter that specific context, not a generic exclusion list.
+          </p>
+          <textarea
+            value={negContext}
+            onChange={(e) => setNegContext(e.target.value)}
+            placeholder="e.g. clean flat vector, bold outlines, limited retro palette, sticker-ready with transparent background"
+            rows={3}
+            className="input-field"
+            style={{ padding: '0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', resize: 'vertical', fontFamily: 'inherit', fontSize: '0.85rem' }}
+          />
+          {negError && <div style={{ color: '#f87171', fontSize: '0.82rem' }}>{negError}</div>}
+          <button
+            className="btn btn-secondary"
+            onClick={generateNegativePrompt}
+            disabled={isGeneratingNeg || !negContext.trim()}
+            style={{ alignSelf: 'flex-start', padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+          >
+            {isGeneratingNeg ? <span className="animate-pulse">Building Negative Prompt...</span> : <><Ban size={15} /> Generate Negative Prompt</>}
+          </button>
+
+          {negPrompt && (
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.4' }}>{negPrompt}</p>
+              <button
+                className="btn"
+                onClick={() => { copyToClipboard(negPrompt, 'neg'); setCopiedNeg(true); setTimeout(() => setCopiedNeg(false), 2000); }}
+                style={{ alignSelf: 'flex-end', padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: copiedNeg ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.1)', color: copiedNeg ? '#4ade80' : 'white', border: '1px solid', borderColor: copiedNeg ? 'rgba(74, 222, 128, 0.3)' : 'rgba(255,255,255,0.1)' }}
+              >
+                {copiedNeg ? <><CheckCircle2 size={14} /> Copied!</> : <><Copy size={14} /> Copy Negative Prompt</>}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

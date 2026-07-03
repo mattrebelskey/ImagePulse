@@ -1,4 +1,4 @@
-import { Activity, Search as SearchIcon, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
 export function TrendCard({ trend, isSelected, onClick, isFavorite, onToggleFavorite }) {
   return (
@@ -42,18 +42,7 @@ export function TrendCard({ trend, isSelected, onClick, isFavorite, onToggleFavo
         <span className="badge" style={{ marginBottom: '0.5rem' }}>{trend.category}</span>
         <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{trend.title}</h3>
       </div>
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <SearchIcon size={16} />
-          <span>{trend.searchVolume}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <Activity size={16} color={trend.competition === 'Low' ? '#4ade80' : trend.competition === 'Medium' ? '#facc15' : '#f87171'} />
-          <span>{trend.competition} Comp.</span>
-        </div>
-      </div>
-      
+
       <div>
         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Top Keywords:</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>

@@ -23,8 +23,8 @@ app.get('/api/trends', async (req, res) => {
     if (!ai) {
       // Fallback
       return res.json([
-        { id: 1, title: 'Vintage Botanical Posters', category: 'Vintage', searchVolume: '50,000+', competition: 'Low', keywords: ['vintage', 'botanical', 'poster'] },
-        { id: 2, title: 'Cozy Gamer Room Decor', category: 'Gamer', searchVolume: '20,000+', competition: 'Medium', keywords: ['cozy', 'gamer', 'decor'] }
+        { id: 1, title: 'Vintage Botanical Posters', category: 'Vintage', keywords: ['vintage', 'botanical', 'poster'] },
+        { id: 2, title: 'Cozy Gamer Room Decor', category: 'Gamer', keywords: ['cozy', 'gamer', 'decor'] }
       ]);
     }
 
@@ -38,9 +38,8 @@ app.get('/api/trends', async (req, res) => {
       - title: The niche title (e.g., "Retro 70s Floral Ghosts")
       - category: A short aesthetic category (e.g., "Retro Goth")
       - keywords: An array of 3 strong long-tail keywords
-      - searchVolume: A string like "15,000+"
-      - competition: "Low" or "Medium"
-      
+
+      Do NOT invent search volume, demand, popularity, or competition numbers of any kind.
       ONLY return the JSON array, no extra markdown.
     `;
     
@@ -72,11 +71,11 @@ app.get('/api/trends', async (req, res) => {
     } else {
       // Offline Fallback Data
       niches = [
-        { title: "Retro 70s Floral Ghosts", category: "Retro Goth", keywords: ["retro 70s halloween", "floral ghost shirt", "groovy halloween aesthetic"], searchVolume: "20,000+", competition: "Low" },
-        { title: "Cozy Gamer Coffee Club", category: "Cozy Gamer", keywords: ["cozy gamer girl", "coffee and games", "aesthetic gaming desk"], searchVolume: "45,000+", competition: "Medium" },
-        { title: "Neurospicy & Thriving", category: "Mental Health", keywords: ["neurodivergent pride", "adhd aesthetic", "autism acceptance"], searchVolume: "35,000+", competition: "Low" },
-        { title: "Dark Academia Bookworm", category: "Dark Academia", keywords: ["dark academia aesthetic", "book lover gift", "classic literature quotes"], searchVolume: "60,000+", competition: "Medium" },
-        { title: "Pastel Goth Tarot", category: "Pastel Goth", keywords: ["pastel goth tarot card", "cute creepy aesthetic", "witchy pastel"], searchVolume: "15,000+", competition: "Low" }
+        { title: "Retro 70s Floral Ghosts", category: "Retro Goth", keywords: ["retro 70s halloween", "floral ghost shirt", "groovy halloween aesthetic"] },
+        { title: "Cozy Gamer Coffee Club", category: "Cozy Gamer", keywords: ["cozy gamer girl", "coffee and games", "aesthetic gaming desk"] },
+        { title: "Neurospicy & Thriving", category: "Mental Health", keywords: ["neurodivergent pride", "adhd aesthetic", "autism acceptance"] },
+        { title: "Dark Academia Bookworm", category: "Dark Academia", keywords: ["dark academia aesthetic", "book lover gift", "classic literature quotes"] },
+        { title: "Pastel Goth Tarot", category: "Pastel Goth", keywords: ["pastel goth tarot card", "cute creepy aesthetic", "witchy pastel"] }
       ];
     }
     
@@ -94,7 +93,8 @@ app.get('/api/trends', async (req, res) => {
 
 // 2. Generate AI Prompts, Tags, Title & Save to DB
 app.post('/api/generate-prompts', async (req, res) => {
-  const { title, keywords, productType = 'T-Shirt' } = req.body;
+  const { title, keywords, productType = 'T-Shirt', style = '' } = req.body;
+  const artStyle = (style || '').trim();
   
   if (!ai) {
     return res.status(401).json({ error: 'Gemini API key is not configured on the server. Please add GEMINI_API_KEY to server/.env' });
@@ -139,9 +139,10 @@ app.post('/api/generate-prompts', async (req, res) => {
       I have a trending POD niche: "${title}".
       Top keywords: ${keywords.join(', ')}.
       Target Product Type: ${productType}.
-      
+      ${artStyle ? `Art Style: render EVERY prompt in a "${artStyle}" art style. This style must be explicitly and clearly reflected in the wording of each prompt.` : ''}
+
       Please generate:
-      1. 3 highly detailed, creative, and commercial-ready image generation prompts (Midjourney/DALL-E) for this niche, specifically tailored to make a good design for a ${productType}. CRITICAL: NO copyrighted/trademarked characters or brands.
+      1. 3 highly detailed, creative, and commercial-ready image generation prompts (Midjourney/DALL-E) for this niche, specifically tailored to make a good design for a ${productType}${artStyle ? ` in a ${artStyle} art style` : ''}. CRITICAL: NO copyrighted/trademarked characters or brands.
       2. 13 SEO-optimized Etsy tags (comma-separated or array of strings, max 20 chars each if possible), targeted for a ${productType} listing.
       3. 2 highly optimized Etsy product titles (using long-tail keywords), targeted for a ${productType} listing.
 
@@ -180,11 +181,12 @@ app.post('/api/generate-prompts', async (req, res) => {
       generatedData = JSON.parse(text);
     } else {
       // Offline Fallback Data
+      const styleTag = artStyle ? `${artStyle} style ` : '';
       generatedData = {
         prompts: [
-          `A highly aesthetic ${productType} design for ${title}, vibrant colors, vector style, isolated on white background.`,
-          `Trending minimalist ${productType} graphic featuring ${keywords[0]}, soft pastel aesthetic, clean lines, white background.`,
-          `Detailed vintage style illustration for ${title}, perfect for a ${productType}, distressed texture, isolated on white.`
+          `A highly aesthetic ${styleTag}${productType} design for ${title}, vibrant colors, isolated on white background.`,
+          `Trending ${styleTag || 'minimalist '}${productType} graphic featuring ${keywords[0]}, clean lines, white background.`,
+          `Detailed ${styleTag || 'vintage style '}illustration for ${title}, perfect for a ${productType}, isolated on white.`
         ],
         tags: ["aesthetic", "trending", "gift idea", ...keywords.slice(0, 10)],
         titles: [
@@ -213,6 +215,70 @@ app.post('/api/generate-prompts', async (req, res) => {
   } catch (error) {
     console.error('Gemini Generation Error:', error);
     res.status(500).json({ error: 'Failed to generate prompts via Gemini' });
+  }
+});
+
+// 2b. Negative Prompt Generator (context-specific, NOT a generic exclusion list)
+app.post('/api/negative-prompt', async (req, res) => {
+  const { context = '', title = '', style = '' } = req.body;
+  const notes = (context || '').trim();
+
+  if (!notes) {
+    return res.status(400).json({ error: 'Enter your style, inspiration, or notes so the negative prompt can be tailored to it.' });
+  }
+
+  if (!ai) {
+    return res.status(401).json({ error: 'Gemini API key is not configured on the server. Please add GEMINI_API_KEY to server/.env' });
+  }
+
+  try {
+    const negInstructions = `
+      Act as an expert AI image prompt engineer.
+      A print-on-demand designer described the style, inspiration, and notes for a design they want to make:
+      """
+      ${notes}
+      """
+      ${title ? `The design is for this niche: "${title}".` : ''}
+      ${(style || '').trim() ? `The chosen art style is: "${(style || '').trim()}".` : ''}
+
+      Write ONE negative prompt: a comma-separated list of things to EXCLUDE that would specifically ruin or contradict THIS described style and intent.
+      Tailor every exclusion to counter the specific context above. Do NOT return a generic catch-all list.
+      For example, if they want clean flat vector art, exclude photorealism, gradients, 3D renders, and busy backgrounds; if they want soft watercolor, exclude hard vector edges, neon, and heavy black outlines.
+      You may add a few universal print-quality exclusions (blurry, low resolution, watermark, extra limbs, distorted text), but the bulk must be specific to the context.
+
+      Return ONLY the comma-separated negative prompt text. No preamble, no markdown, no surrounding quotes, no explanation.
+    `;
+
+    let text = null;
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: negInstructions,
+      });
+      text = response.text;
+    } catch (e) {
+      console.warn('Negative prompt Pro failed, falling back to Flash:', e.message);
+      const fallbackResp = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: negInstructions,
+      });
+      text = fallbackResp.text;
+    }
+
+    const negativePrompt = (text || '')
+      .replace(/```/g, '')
+      .replace(/^\s*negative prompt:?\s*/i, '')
+      .replace(/^["']|["']$/g, '')
+      .trim();
+
+    if (!negativePrompt) {
+      return res.status(500).json({ error: 'The AI returned an empty negative prompt. Please try again.' });
+    }
+
+    res.json({ negativePrompt });
+  } catch (error) {
+    console.error('Negative Prompt Error:', error);
+    res.status(500).json({ error: 'Failed to generate negative prompt via Gemini' });
   }
 });
 
