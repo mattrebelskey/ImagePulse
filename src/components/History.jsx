@@ -7,7 +7,7 @@ export function History() {
   const [copiedKey, setCopiedKey] = useState(null);
 
   const fetchHistory = () => {
-    fetch('http://localhost:3000/api/history')
+    fetch('/api/history')
       .then(res => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -34,7 +34,7 @@ export function History() {
 
   const deleteEntry = async (id) => {
     try {
-      await fetch(`http://localhost:3000/api/history/${id}`, { method: 'DELETE' });
+      await fetch(`/api/history/${id}`, { method: 'DELETE' });
       setHistory(prev => prev.filter(item => item.id !== id));
     } catch (err) {
       console.error('Failed to delete history entry:', err);

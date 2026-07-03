@@ -7,30 +7,28 @@ Started in Google Antigravity, migrated to Claude Code 2026-07-02. This clone at
 ## Stack
 
 - **Frontend:** React 19 + Vite 8 (plain JSX, no TypeScript). Inline styles + `src/index.css` (glassmorphism dark theme). Icons via `lucide-react`.
-- **Backend:** Node.js + Express 5 (CommonJS). `server/index.js` is the whole API.
-- **Database:** Supabase Postgres (project `nnyhwhirdtvgdwsbuhnt`, us-east-2) via `pg` over the transaction pooler, TLS pinned to `server/supabase-ca.crt`. Schema lives in `supabase/migrations/` (applied with `npx supabase db push --linked`); `server/db.js` exports the Pool. Connection string `SUPABASE_DB_URL` in `server/.env` (gitignored). The old SQLite file `server/imagepulse.db` is archival only (ported 2026-07-03 by `server/scripts/migrate-sqlite-to-postgres.js`); `better-sqlite3` stays a dependency only for that script — drop both in Session 2.
+- **Backend:** Vercel serverless functions in `api/` (plain JS, ESM — root package.json is `"type": "module"`). One file per endpoint (Vercel file-based routing); shared helpers in `api/_lib/` (underscore dirs are not exposed as routes). The old Express 5 server (`server/index.js`, CommonJS) still works as a legacy fallback and gets deleted in Session 5.
+- **Database:** Supabase Postgres (project `nnyhwhirdtvgdwsbuhnt`, us-east-2) via `pg` over the transaction pooler, TLS pinned to `server/supabase-ca.crt`. Schema lives in `supabase/migrations/` (applied with `npx supabase db push --linked`); `api/_lib/db.js` exports the Pool (the legacy Express copy is `server/db.js`). Connection string `SUPABASE_DB_URL` in root `.env` for `vercel dev` and in `server/.env` for the legacy server (both gitignored). The old SQLite file `server/imagepulse.db` is archival only (ported 2026-07-03; the one-time migration script was deleted in Session 2 — recover from commit `f6c1a04` if ever needed). `better-sqlite3` dropped 2026-07-03.
 - **AI:** Google Gemini via `@google/genai` (`gemini-2.5-pro` with `gemini-2.5-flash` fallback, then hardcoded offline fallback). Trademark check uses Gemini Google Search grounding.
 - **Repo:** github.com/mattrebelskey/ImagePulse (public). Default branch `master`. Commit author: Matt Rebelskey <matt.rebelskey@gmail.com> (repo-local config).
 
-## Run it (two terminals)
+## Run it (one terminal)
 
 ```
-# Terminal 1 - backend (needs GEMINI_API_KEY at User scope + SUPABASE_DB_URL in server/.env)
-cd server && npm install && npm start      # http://localhost:3000
-
-# Terminal 2 - frontend
-npm install && npm run dev                  # http://localhost:5173
+# needs GEMINI_API_KEY at User scope + SUPABASE_DB_URL in root .env
+npm install && npx vercel dev              # frontend + api on http://localhost:3000
 ```
 
-Without `GEMINI_API_KEY`, `/api/trends` serves a 2-item fallback and `/api/generate-prompts` returns 401. Frontend fetches are hardcoded to `http://localhost:3000`.
+Legacy two-terminal workflow still works (`cd server && npm start` + `npm run dev`; vite proxies `/api` to port 3000). Without `GEMINI_API_KEY`, `/api/trends` serves a 2-item fallback and `/api/generate-prompts` returns 401. Frontend fetches use relative `/api` paths.
 
-## API surface (server/index.js)
+## API surface (api/)
 
-- `GET /api/trends?seed=` - AI-generated micro-niches (or fallback).
-- `POST /api/generate-prompts` - trademark check, then 3 prompts + 13 tags + 2 titles; auto-logs to `generation_history`.
-- `GET/POST/DELETE /api/favorites` - saved niches (`favorite_niches`).
-- `GET/POST/DELETE /api/favorite-packages` - manually saved packages (`favorite_packages`).
-- `GET/DELETE /api/history` - auto-logged generations (`generation_history`), read by the History tab.
+- `GET /api/trends?seed=` - AI-generated micro-niches (or fallback). `api/trends.js`
+- `POST /api/generate-prompts` - trademark check, then 3 prompts + 13 tags + 2 titles; auto-logs to `generation_history`. `api/generate-prompts.js`
+- `POST /api/negative-prompt` - context-tailored negative prompt. `api/negative-prompt.js`
+- `GET/POST/DELETE /api/favorites` - saved niches (`favorite_niches`). `api/favorites/index.js` + `api/favorites/[title].js`
+- `GET/POST/DELETE /api/favorite-packages` - manually saved packages (`favorite_packages`). `api/favorite-packages/index.js` + `api/favorite-packages/[id].js`
+- `GET/DELETE /api/history` - auto-logged generations (`generation_history`), read by the History tab. `api/history/index.js` + `api/history/[id].js`
 
 ## No-touch rules
 

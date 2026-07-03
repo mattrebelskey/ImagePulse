@@ -25,3 +25,5 @@ dist-ssr
 
 server/.env
 server/imagepulse.db
+.env
+.vercel

@@ -89,9 +89,43 @@ Parallel track (not blocking A): listing-builder React port (flagship differenti
 Verified 2026-07-03: NO Supabase footing on this machine (no CLI, no ~/.supabase, no SUPABASE_URL in any Code project .env). From scratch.
 
 - **Session 1 — Supabase foundation. ✅ DONE 2026-07-03.** Project `nnyhwhirdtvgdwsbuhnt` (us-east-2, org "Red", free tier) created via Management API; `npx supabase` v2.109.0 ran fine (no Smart App Control block). Schema migration `supabase/migrations/20260703191206_initial_schema.sql` applied via `db push --linked`: 9 tables (plans, profiles, listings + status/retired-reason enums, store_pushes, favorite_niches, favorite_packages, generation_history, byok_keys, run_ledger), RLS enabled everywhere with zero policies (deny-by-default; Session 3 adds policies + backfills the nullable user_id columns). Advisors: no issues. SQLite data ported (4 history rows, counts reconciled); Express wired to Postgres via `pg` over the transaction pooler (port 6543, serverless-ready), TLS verified against pinned Supabase CA (`server/supabase-ca.crt`). All DB routes tested green end-to-end. Creds in `server/.env` (gitignored): SUPABASE_DB_PASSWORD + SUPABASE_DB_URL. Notes for later sessions: (a) tables are NOT exposed to the Data API (post-2026-04-28 default) — Session 3 must grant deliberately if supabase-js is used; (b) drop `better-sqlite3` + the migration script in Session 2; (c) plan rows seeded with placeholder prices ($0/$9/$19) and run caps (3/25/100) — Red re-prices at Milestone B.
-- **Session 2 — API port.** Express routes → Vercel functions; frontend fetches → relative /api; verify with `vercel dev` locally.
+- **Session 2 — API port. ✅ DONE 2026-07-03.** All 5 Express route groups (+ negative-prompt) ported to Vercel functions in `api/` — plain-JS ESM (root package.json is `"type": "module"`), one file per endpoint, shared `api/_lib/db.js` (pg Pool, max 1/instance) + `api/_lib/gemini.js`; Gemini pro→flash fallback cascades copied verbatim so behavior is identical. Frontend fetches → relative `/api` (vite proxy added only for the legacy two-terminal Express workflow). `better-sqlite3` + migration script dropped (script recoverable from commit `f6c1a04`). Verified end-to-end with `vercel dev` against Supabase: history read + delete, favorite save/duplicate-no-op/delete (URL-encoded title decodes correctly), package save/delete, live trends + generate-prompts (grounded trademark check + history auto-log) + negative-prompt, 405 method guards; DB restored to pre-session state. Notes for later sessions: (a) Vercel project `imagepulse` linked (scope mattrebelskeys-projects) — `vercel link` AUTO-CONNECTED the GitHub repo (would auto-deploy on push); I disconnected it same day. Session 5 reconnects deliberately or deploys via CLI. (b) `vercel dev` reads root `.env` (gitignored) for SUPABASE_DB_URL; GEMINI_API_KEY inherits from User scope. Session 5 must set both as Vercel project env vars. (c) TLS CA cert copied to `api/_lib/supabase-ca.crt`, read via `fs.readFileSync(new URL(...))` — works under `vercel dev`; Session 5 must confirm the deploy bundler traces the .crt file (add `vercel.json` functions `includeFiles` if not). (d) `server/` (Express + its copies of db.js/.env/CA) stays as legacy fallback until Session 5 deletes it.
 - **Session 3 — Auth + multi-tenancy.** Supabase Auth (email + Google), RLS on every table.
 - **Session 4 — BYOK.** Settings page: paste Gemini key → validation ping → encrypted at rest → per-request use, never logged.
 - **Session 5 — Deploy + dogfood.** Link Vercel project, env vars, deploy. CLAUDE DOGFOODS IT (Red's request: "I mostly just want to see how it works"): drive the hosted app via Playwright — sign up, enter key, run a full generation — screenshot each step and deliver a walkthrough report. Then Red tests himself.
 
 Each session starts fresh with THIS DOC as the brief. Update the checkboxes/status here at each session end.
+
+## Session 3 opener (paste into a fresh session)
+
+> Session 3 of ImagePulse Milestone A — Auth + multi-tenancy.
+> Brief: C:\Users\mattr\Documents\Code\ImagePulse\research\productization-architecture.md
+> (read "Milestone A session plan" — Sessions 1-2 are DONE, their status entries have the
+> notes you need; also read the project CLAUDE.md).
+>
+> State of the world:
+> - Sessions 1-2 are committed on branch feat/supabase-foundation (not yet merged or pushed).
+> - API is Vercel functions in api/ (ESM), verified locally via `npx vercel dev` on :3000
+>   against Supabase (project nnyhwhirdtvgdwsbuhnt, us-east-2). DB access via pg over the
+>   transaction pooler, TLS pinned to api/_lib/supabase-ca.crt. Root .env has SUPABASE_DB_URL;
+>   GEMINI_API_KEY is at User scope. Vercel project `imagepulse` is linked (.vercel/), git
+>   integration deliberately DISCONNECTED — do not reconnect; deploy is Session 5.
+>
+> Session 3 scope (from the brief):
+> 1. Supabase Auth: email + Google sign-in, supabase-js client in the React app,
+>    login/signup UI matching the glassmorphism dark theme.
+> 2. Multi-tenancy: backfill/enforce the nullable user_id columns on favorite_niches,
+>    favorite_packages, generation_history; every api/ function scopes queries to the
+>    authenticated user (verify the JWT server-side).
+> 3. RLS policies on every table (Session 1 left RLS enabled with zero policies,
+>    deny-by-default). Decide grants deliberately: tables are NOT exposed to the Data API
+>    (post-2026-04-28 default) — grant only what supabase-js actually needs, if anything;
+>    the pg-over-pooler path bypasses the Data API and needs policies only if we adopt
+>    authenticated roles there.
+> 4. Verify locally with `npx vercel dev`: two test users can't see each other's
+>    favorites/history; signed-out requests are rejected.
+>
+> Gotchas carried over: don't merge History and Saved Packages; no TypeScript, match house
+> style; existing rows (4 history rows, Red's data) must survive the user_id backfill —
+> assign them to Red's account. Deploy is Session 5; this session is local-only.
+> Update the brief's status line at session end and write the Session 4 opener prompt.
