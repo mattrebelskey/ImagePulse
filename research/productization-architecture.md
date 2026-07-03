@@ -96,6 +96,17 @@ Verified 2026-07-03: NO Supabase footing on this machine (no CLI, no ~/.supabase
 
 Each session starts fresh with THIS DOC as the brief. Update the checkboxes/status here at each session end.
 
+### Known security debt (post-Session-2 review, 2026-07-03 — tracked, not yet fixed)
+
+1. ~~**Trademark safety check fails OPEN**~~ **FIXED fail-closed 2026-07-03** (Red's call, same day as review): if no safety verdict is obtainable from either Gemini model, `/api/generate-prompts` now returns 503 ("safety check temporarily unavailable") instead of proceeding unchecked. Applied to both `api/generate-prompts.js` and the legacy `server/index.js` (kept in lockstep until Session 5). Verified: dead-key run → 503 + no history row; real-key run → 200 + auto-log; trends offline fallback unchanged.
+1b. **OPEN DECISION — Gemini reliability backup (Red, 2026-07-03: "Gemini 2.5 has been failing a lot... find a backup or maybe a whole different API").** Fail-closed makes Gemini outages visible as blocked generations, so redundancy now matters. This is a product decision, not a quick swap: pricing is BYOK-*Gemini* (user's key powers all calls), so a second provider changes what key(s) users bring. Sub-option worth separating: the trademark safety check is the PLATFORM'S legal guardrail and could run on Red's house key with a second provider (needs web-search grounding — candidates: Anthropic, OpenAI; verify current grounding support + pricing when scoping) independent of the user's BYOK generation calls. Scope no later than Session 4 (BYOK), since it shapes the key-management design. The Milestone B USPTO gate removes the LLM dependency for trademark verdicts entirely.
+2. **Safety check is prompt-injectable**: user `title` is spliced unescaped into the safety prompt, so a crafted title can force "SAFE". Inherent to the LLM-as-gate heuristic; the Milestone B USPTO local index replaces it. Until then the verdict stays labeled heuristic.
+3. **No rate limiting on the 3 Gemini-backed endpoints**: full run-metering is Milestone B, but add at least a coarse per-IP limiter in Session 5 before anything is publicly reachable.
+4. **`req.body` destructured before try/catch** in the 4 POST handlers → missing/non-JSON body gives an unhandled 500 instead of a clean 400. Cosmetic; fold into Session 3 while touching every handler anyway.
+5. **Stale error strings** in `generate-prompts.js`/`negative-prompt.js` still say "add GEMINI_API_KEY to server/.env" (now root .env / Vercel env vars). Fold into Session 3 or 4 (BYOK rewrites these paths anyway).
+
+(No-auth-on-everything is not listed — that is Session 3 itself. .env handling, SQL parameterization, error-leakage, and secrets were reviewed clean.)
+
 ## Session 3 opener (paste into a fresh session)
 
 > Session 3 of ImagePulse Milestone A — Auth + multi-tenancy.
@@ -116,7 +127,13 @@ Each session starts fresh with THIS DOC as the brief. Update the checkboxes/stat
 >    login/signup UI matching the glassmorphism dark theme.
 > 2. Multi-tenancy: backfill/enforce the nullable user_id columns on favorite_niches,
 >    favorite_packages, generation_history; every api/ function scopes queries to the
->    authenticated user (verify the JWT server-side).
+>    authenticated user (verify the JWT server-side). CRITICAL: api/_lib/db.js connects
+>    as the table OWNER via the pooler, and owners bypass RLS — so the explicit
+>    `WHERE user_id = $1` on every query IS the tenancy enforcement for the api/ path.
+>    Do not assume the Session 3 RLS policies cover these routes; they only guard the
+>    Data API / supabase-js path. Also fix while touching every handler: guard
+>    `req.body || {}` in the 4 POST handlers, and the stale "server/.env" error strings
+>    (see "Known security debt" above).
 > 3. RLS policies on every table (Session 1 left RLS enabled with zero policies,
 >    deny-by-default). Decide grants deliberately: tables are NOT exposed to the Data API
 >    (post-2026-04-28 default) — grant only what supabase-js actually needs, if anything;

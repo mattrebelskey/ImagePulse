@@ -20,7 +20,10 @@ export default async function handler(req, res) {
       Respond with exactly one word: "SAFE" if it is generic and safe to use in commercial print-on-demand designs, or "UNSAFE" if it is trademarked/copyrighted/protected.
     `;
 
+    // Fail CLOSED: if no safety verdict could be obtained, block generation
+    // rather than proceed unchecked (this is the product's legal guardrail).
     let isUnsafe = false;
+    let safetyChecked = false;
     try {
       const safetyResponse = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
@@ -29,6 +32,7 @@ export default async function handler(req, res) {
       });
       const safetyText = safetyResponse.text || '';
       isUnsafe = safetyText.toUpperCase().includes('UNSAFE');
+      safetyChecked = true;
     } catch (e) {
       console.warn('Safety check Pro failed, falling back to Flash:', e.message);
       try {
@@ -38,9 +42,14 @@ export default async function handler(req, res) {
         });
         const safetyText = safetyFallback.text || '';
         isUnsafe = safetyText.toUpperCase().includes('UNSAFE');
+        safetyChecked = true;
       } catch (err2) {
-        console.warn('Safety check Flash failed, bypassing safety check:', err2.message);
+        console.warn('Safety check Flash failed too:', err2.message);
       }
+    }
+
+    if (!safetyChecked) {
+      return res.status(503).json({ error: 'The trademark safety check is temporarily unavailable (AI provider error). Generation is blocked until the check can run - please try again in a moment.' });
     }
 
     if (isUnsafe) {
