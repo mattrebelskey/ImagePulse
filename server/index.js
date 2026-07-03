@@ -107,8 +107,11 @@ app.post('/api/generate-prompts', async (req, res) => {
       Respond with exactly one word: "SAFE" if it is generic and safe to use in commercial print-on-demand designs, or "UNSAFE" if it is trademarked/copyrighted/protected.
     `;
     
-    // Fail CLOSED: if no safety verdict could be obtained, block generation
-    // rather than proceed unchecked (this is the product's legal guardrail).
+    // Fail CLOSED: only an explicit SAFE/UNSAFE verdict counts. A call that
+    // errors OR succeeds with empty/hedging text yields no verdict; without a
+    // verdict generation is blocked (this is the product's legal guardrail).
+    // Note: 'UNSAFE'.includes('SAFE') is true, so includes('SAFE') accepts
+    // either explicit verdict.
     let isUnsafe = false;
     let safetyChecked = false;
     try {
@@ -117,19 +120,21 @@ app.post('/api/generate-prompts', async (req, res) => {
         contents: safetyPrompt,
         config: { tools: [{ googleSearch: {} }] }
       });
-      const safetyText = safetyResponse.text || '';
-      isUnsafe = safetyText.toUpperCase().includes('UNSAFE');
-      safetyChecked = true;
+      const safetyText = (safetyResponse.text || '').toUpperCase();
+      isUnsafe = safetyText.includes('UNSAFE');
+      safetyChecked = safetyText.includes('SAFE');
     } catch (e) {
       console.warn('Safety check Pro failed, falling back to Flash:', e.message);
+    }
+    if (!safetyChecked) {
       try {
         const safetyFallback = await ai.models.generateContent({
           model: 'gemini-2.5-flash',
           contents: safetyPrompt
         });
-        const safetyText = safetyFallback.text || '';
-        isUnsafe = safetyText.toUpperCase().includes('UNSAFE');
-        safetyChecked = true;
+        const safetyText = (safetyFallback.text || '').toUpperCase();
+        isUnsafe = safetyText.includes('UNSAFE');
+        safetyChecked = safetyText.includes('SAFE');
       } catch (err2) {
         console.warn('Safety check Flash failed too:', err2.message);
       }
