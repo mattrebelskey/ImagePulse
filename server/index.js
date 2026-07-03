@@ -198,14 +198,15 @@ app.post('/api/generate-prompts', async (req, res) => {
     
     // Auto-log every generated package to History (distinct from manually-saved packages).
     try {
-      db.prepare(
-        'INSERT INTO generation_history (trend_title, product_type, prompts_json, tags_json, titles_json) VALUES (?, ?, ?, ?, ?)'
-      ).run(
-        title,
-        productType,
-        JSON.stringify(generatedData.prompts),
-        JSON.stringify(generatedData.tags),
-        JSON.stringify(generatedData.titles)
+      await db.query(
+        'INSERT INTO generation_history (trend_title, product_type, prompts, tags, titles) VALUES ($1, $2, $3, $4, $5)',
+        [
+          title,
+          productType,
+          JSON.stringify(generatedData.prompts),
+          JSON.stringify(generatedData.tags),
+          JSON.stringify(generatedData.titles)
+        ]
       );
     } catch (logErr) {
       console.warn('Failed to log generation to history:', logErr.message);
@@ -283,99 +284,100 @@ app.post('/api/negative-prompt', async (req, res) => {
 });
 
 // 3. Saved Packages
-app.get('/api/favorite-packages', (req, res) => {
+app.get('/api/favorite-packages', async (req, res) => {
   try {
-    const packages = db.prepare('SELECT * FROM favorite_packages ORDER BY created_at DESC').all();
-    const parsedPackages = packages.map(p => ({
-      ...p,
-      prompts: JSON.parse(p.prompts_json),
-      tags: JSON.parse(p.tags_json),
-      titles: JSON.parse(p.titles_json)
-    }));
-    res.json(parsedPackages);
+    // jsonb columns come back as parsed arrays; no JSON.parse step needed.
+    const { rows } = await db.query(
+      'SELECT id, trend_title, product_type, prompts, tags, titles, created_at FROM favorite_packages ORDER BY created_at DESC'
+    );
+    res.json(rows);
   } catch (error) {
+    console.error('Failed to fetch saved packages:', error.message);
     res.status(500).json({ error: 'Failed to fetch saved packages' });
   }
 });
 
-app.post('/api/favorite-packages', (req, res) => {
+app.post('/api/favorite-packages', async (req, res) => {
   const { trend_title, product_type, generatedData } = req.body;
   try {
-    const insertStmt = db.prepare('INSERT INTO favorite_packages (trend_title, product_type, prompts_json, tags_json, titles_json) VALUES (?, ?, ?, ?, ?)');
-    insertStmt.run(trend_title, product_type, JSON.stringify(generatedData.prompts), JSON.stringify(generatedData.tags), JSON.stringify(generatedData.titles));
+    await db.query(
+      'INSERT INTO favorite_packages (trend_title, product_type, prompts, tags, titles) VALUES ($1, $2, $3, $4, $5)',
+      [trend_title, product_type, JSON.stringify(generatedData.prompts), JSON.stringify(generatedData.tags), JSON.stringify(generatedData.titles)]
+    );
     res.json({ success: true });
   } catch (error) {
+    console.error('Failed to save package:', error.message);
     res.status(500).json({ error: 'Failed to save package' });
   }
 });
 
-app.delete('/api/favorite-packages/:id', (req, res) => {
+app.delete('/api/favorite-packages/:id', async (req, res) => {
   try {
-    const deleteStmt = db.prepare('DELETE FROM favorite_packages WHERE id = ?');
-    deleteStmt.run(req.params.id);
+    await db.query('DELETE FROM favorite_packages WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('Failed to remove package:', error.message);
     res.status(500).json({ error: 'Failed to remove package' });
   }
 });
 
 // 3b. Generation History (auto-logged on every generate-prompts call)
-app.get('/api/history', (req, res) => {
+app.get('/api/history', async (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM generation_history ORDER BY created_at DESC LIMIT 100').all();
-    const parsed = rows.map(r => ({
-      ...r,
-      prompts: JSON.parse(r.prompts_json),
-      tags: JSON.parse(r.tags_json),
-      titles: JSON.parse(r.titles_json)
-    }));
-    res.json(parsed);
+    const { rows } = await db.query(
+      'SELECT id, trend_title, product_type, prompts, tags, titles, created_at FROM generation_history ORDER BY created_at DESC LIMIT 100'
+    );
+    res.json(rows);
   } catch (error) {
+    console.error('Failed to fetch history:', error.message);
     res.status(500).json({ error: 'Failed to fetch history' });
   }
 });
 
-app.delete('/api/history/:id', (req, res) => {
+app.delete('/api/history/:id', async (req, res) => {
   try {
-    db.prepare('DELETE FROM generation_history WHERE id = ?').run(req.params.id);
+    await db.query('DELETE FROM generation_history WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
+    console.error('Failed to remove history entry:', error.message);
     res.status(500).json({ error: 'Failed to remove history entry' });
   }
 });
 
 // 4. Favorites (Niches)
-app.get('/api/favorites', (req, res) => {
+app.get('/api/favorites', async (req, res) => {
   try {
-    const favs = db.prepare('SELECT * FROM favorite_niches ORDER BY created_at DESC').all();
-    // Parse keywords_json back to array
-    const parsedFavs = favs.map(f => ({
-      ...f,
-      keywords: JSON.parse(f.keywords_json)
-    }));
-    res.json(parsedFavs);
+    const { rows } = await db.query(
+      'SELECT id, title, category, keywords, created_at FROM favorite_niches ORDER BY created_at DESC'
+    );
+    res.json(rows);
   } catch (error) {
+    console.error('Failed to fetch favorites:', error.message);
     res.status(500).json({ error: 'Failed to fetch favorites' });
   }
 });
 
-app.post('/api/favorites', (req, res) => {
+app.post('/api/favorites', async (req, res) => {
   const { title, category, keywords } = req.body;
   try {
-    const insertStmt = db.prepare('INSERT OR IGNORE INTO favorite_niches (title, category, keywords_json) VALUES (?, ?, ?)');
-    insertStmt.run(title, category, JSON.stringify(keywords));
+    // Mirrors SQLite's INSERT OR IGNORE on the (user_id, title) unique constraint.
+    await db.query(
+      'INSERT INTO favorite_niches (title, category, keywords) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT favorite_niches_user_title_uniq DO NOTHING',
+      [title, category, JSON.stringify(keywords)]
+    );
     res.json({ success: true });
   } catch (error) {
+    console.error('Failed to save favorite:', error.message);
     res.status(500).json({ error: 'Failed to save favorite' });
   }
 });
 
-app.delete('/api/favorites/:title', (req, res) => {
+app.delete('/api/favorites/:title', async (req, res) => {
   try {
-    const deleteStmt = db.prepare('DELETE FROM favorite_niches WHERE title = ?');
-    deleteStmt.run(req.params.title);
+    await db.query('DELETE FROM favorite_niches WHERE title = $1', [req.params.title]);
     res.json({ success: true });
   } catch (error) {
+    console.error('Failed to remove favorite:', error.message);
     res.status(500).json({ error: 'Failed to remove favorite' });
   }
 });

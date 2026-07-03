@@ -1,50 +1,19 @@
-const Database = require('better-sqlite3');
+require('dotenv').config();
+const fs = require('fs');
 const path = require('path');
+const { Pool } = require('pg');
 
-const db = new Database(path.join(__dirname, 'imagepulse.db'));
+// Supabase Postgres via the transaction pooler (IPv4-safe, serverless-ready for
+// the Session 2 Vercel port). SUPABASE_DB_URL lives in server/.env (gitignored).
+// TLS is verified against Supabase's pinned CA cert (public cert, safe to commit).
+if (!process.env.SUPABASE_DB_URL) {
+  throw new Error('SUPABASE_DB_URL is not set. Add it to server/.env');
+}
 
-// Initialize Database Schema
-db.exec(`
-  CREATE TABLE IF NOT EXISTS trends (
-    id TEXT PRIMARY KEY,
-    title TEXT,
-    traffic TEXT,
-    date TEXT
-  );
-  
-  CREATE TABLE IF NOT EXISTS prompts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    trend_title TEXT,
-    prompt_text TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE TABLE IF NOT EXISTS favorite_niches (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT UNIQUE,
-    category TEXT,
-    keywords_json TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+const pool = new Pool({
+  connectionString: process.env.SUPABASE_DB_URL,
+  ssl: { ca: fs.readFileSync(path.join(__dirname, 'supabase-ca.crt'), 'utf8') },
+  max: 5,
+});
 
-  CREATE TABLE IF NOT EXISTS favorite_packages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    trend_title TEXT,
-    product_type TEXT,
-    prompts_json TEXT,
-    tags_json TEXT,
-    titles_json TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS generation_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    trend_title TEXT,
-    product_type TEXT,
-    prompts_json TEXT,
-    tags_json TEXT,
-    titles_json TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
-
-module.exports = db;
+module.exports = pool;
