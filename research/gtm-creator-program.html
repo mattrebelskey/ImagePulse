@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImagePulse - YouTube Creator Program (internal)</title>
+<style>
+  :root {
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --bg: #0f172a;
+    --text: #f8fafc;
+    --text-2: #94a3b8;
+    --accent: #8b5cf6;
+    --accent-2: #c084fc;
+    --glass: rgba(255,255,255,0.04);
+    --glass-border: rgba(255,255,255,0.1);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: var(--font); color: var(--text); line-height: 1.65;
+    background-color: var(--bg);
+    background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+    background-attachment: fixed;
+    padding: 48px 24px 80px;
+  }
+  .page { max-width: 860px; margin: 0 auto; }
+  h1 {
+    font-size: 2.2rem; font-weight: 700; letter-spacing: -0.025em; line-height: 1.2;
+    background: linear-gradient(to right, #fff, var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .meta { color: var(--text-2); font-size: 0.9rem; margin-bottom: 36px; }
+  .panel {
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px;
+    padding: 26px 30px; margin-bottom: 22px;
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  }
+  h2 { font-size: 1.25rem; margin-bottom: 12px; letter-spacing: -0.01em; }
+  h2 .tag {
+    font-size: 0.7rem; font-weight: 700; vertical-align: middle; margin-left: 10px;
+    color: var(--accent-2); border: 1px solid rgba(192,132,252,0.4); border-radius: 999px;
+    padding: 2px 10px; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  p, li { color: var(--text-2); font-size: 0.97rem; }
+  p + p { margin-top: 10px; }
+  strong { color: var(--text); }
+  ol, ul { padding-left: 22px; margin-top: 8px; }
+  li { margin-bottom: 10px; }
+  .cost-table { width: 100%; border-collapse: collapse; margin: 12px 0 4px; }
+  .cost-table td { padding: 7px 10px; border-bottom: 1px solid var(--glass-border); font-size: 0.93rem; color: var(--text-2); }
+  .cost-table tr:last-child td { border-bottom: none; color: var(--text); font-weight: 600; }
+  .cost-table td:last-child { text-align: right; white-space: nowrap; }
+  .callout {
+    border-left: 3px solid var(--accent); background: rgba(139,92,246,0.08);
+    border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 12px;
+  }
+  .callout p { color: var(--text); font-size: 0.93rem; }
+  .notes-box {
+    border: 1px dashed rgba(192,132,252,0.45); border-radius: 12px;
+    background: rgba(139,92,246,0.06); padding: 12px 16px; margin-top: 30px;
+  }
+  .notes-box label {
+    font-size: 0.72rem; color: var(--accent-2); font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; display: block; margin-bottom: 4px;
+  }
+  .notes-box textarea {
+    width: 100%; min-height: 60px; background: transparent; border: none; resize: vertical;
+    color: var(--text); font-family: var(--font); font-size: 0.9rem; outline: none;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>YouTube creator program</h1>
+  <p class="meta">Internal planning doc · 2026-07-03 · source: research\gtm-creator-program.md · shapes Milestone B (Stripe + plans), nothing committed yet</p>
+
+  <div class="panel">
+    <h2>Cost model <span class="tag">Red's correction applied</span></h2>
+    <p>Assume creators will <strong>not</strong> bring their own AI key. Asking a creator to go create a
+    Google AI Studio key before they can even try the app is exactly the friction that kills a trial.
+    So comp accounts run on <strong>Red's house key ("house-key mode")</strong> and every AI call is on his dime.</p>
+    <p style="margin-top:14px;"><strong>Per-run cost on the house key</strong> (V1 has no built-in image generation;
+    creators still make images in their own tools, so this is text + data only):</p>
+    <table class="cost-table">
+      <tr><td>Gemini text calls (niches, prompts, tags, negative prompt)</td><td>~$0.02-0.05</td></tr>
+      <tr><td>Grounded trademark check</td><td>~$0.03-0.04</td></tr>
+      <tr><td>Real-data lookup (DataForSEO)</td><td>~$0.06</td></tr>
+      <tr><td>Total per run</td><td>~$0.11-0.15</td></tr>
+    </table>
+    <p>A creator maxing a Pro-level cap (100 runs/mo) costs <strong>$11-15/mo worst case</strong>. A 10-creator
+    cohort at full tilt: ~$110-150/mo; realistic usage is a fraction of that (creators binge for a week,
+    then run sporadically). Cheap enough to stay generous, real enough that comp accounts keep run caps.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Recommended shape</h2>
+    <ol>
+      <li><strong>Founding-creator comps (a small handful, including the POD YouTuber who seeded the idea):</strong>
+      full Pro access on the house key, no expiration ("founding creator" status). Real cost: $1-15/mo each
+      depending on how hard they run it. The "I've used this for months" authenticity in their videos is worth
+      far more, but the bill scales with cohort size, so keep the founding list to <strong>3-5</strong>, not 10.</li>
+      <li><strong>General creator outreach (after the founders):</strong> 90-day full Pro pass, house key,
+      Pro-level run cap (100/mo). Not a week, not a few hours: creators need time to fold a tool into their
+      real workflow before they will show it on camera. Short trials produce no videos.</li>
+      <li><strong>No promotion demanded upfront.</strong> "Here's full access, no strings, tell me what sucks"
+      converts; "free month if you promote me" reads transactional and gets ignored. The ask comes later,
+      after they like it, and even then it's an offer, not a condition.</li>
+      <li><strong>Affiliate layer (the actual incentive):</strong> creator gets a code; their audience gets an
+      extended trial or first-month discount; the creator earns <strong>20-30% recurring for 12 months</strong> on
+      subscribers they bring. Standard micro-SaaS playbook, costs nothing until revenue exists, and turns
+      "please promote me" into "here's a revenue stream for you."</li>
+    </ol>
+  </div>
+
+  <div class="panel">
+    <h2>What it costs overall</h2>
+    <ul>
+      <li>Comps on the house key: roughly <strong>$10-50/mo</strong> for a realistic active cohort;
+      ~$150/mo absolute worst case with 10 creators maxing their caps.</li>
+      <li>Affiliate: 20-30% of revenue that would not exist otherwise. No cash outlay.</li>
+      <li>Paid ads: not in V1. Creator outreach + affiliate is the whole initial motion.</li>
+      <li>The real cost is Red's time writing personalized outreach. That pipeline can be built:
+      shortlist → research the channel → draft per creator → Red approves every send.</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>Build implications <span class="tag">Milestone B, not early</span></h2>
+    <ul>
+      <li><strong>House-key mode:</strong> a per-account flag that routes AI calls to Red's key instead of the
+      user's BYOK entry. Not throwaway work: it's the same plumbing the future Studio tier (credits included)
+      and any keyless free-trial onboarding will need. Comp accounts keep server-side run caps (run_ledger is
+      already planned), and per-IP rate limiting protects against a leaked comp login.</li>
+      <li>Plans/profiles need a comp/override flag (tier + no expiry = founding comp).</li>
+      <li>Stripe promo codes cover trials + discounts; affiliate tracking starts as manual promo-code
+      attribution before any affiliate platform is worth its fee.</li>
+      <li>The Studio "join the waitlist" card doubles as a creator-contact capture point.</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>Open questions for Red <span class="tag">later, none urgent</span></h2>
+    <ul>
+      <li>Who besides the seed YouTuber goes on the founding shortlist?</li>
+      <li>Affiliate percent and duration (20-30% / 12 months is the conventional band).</li>
+      <li>Does the audience-side offer stack with the free tier (code bumps Free 3 → 10 runs for 60 days)
+      or gift Starter outright?</li>
+      <li><strong>The same no-BYOK friction applies to the public Free tier.</strong> If a stranger has to create
+      a Google AI Studio key before their first run, most bounce. A keyless Free tier on the house key costs
+      ~$0.45/user/mo at the full 3-run cap, a viable acquisition cost, but it needs abuse guardrails.
+      Decide at Milestone B alongside run metering.</li>
+    </ul>
+    <div class="callout">
+      <p>The one-sentence version: give the first few creators everything forever (it costs dollars, not
+      hundreds), give the next wave 90 days, never demand promotion upfront, and let an affiliate cut do
+      the asking.</p>
+    </div>
+  </div>
+
+  <div class="notes-box" data-sec="creator-program">
+    <label>Red's notes (saved in this browser)</label>
+    <textarea placeholder="Reactions, creator names for the shortlist, changes..."></textarea>
+  </div>
+
+</div>
+<script>
+  var t = document.querySelector('.notes-box textarea');
+  var key = 'ip-gtm-creator-notes';
+  try { t.value = localStorage.getItem(key) || ''; } catch (e) {}
+  t.addEventListener('input', function () {
+    try { localStorage.setItem(key, t.value); } catch (e) {}
+  });
+</script>
+</body>
+</html>

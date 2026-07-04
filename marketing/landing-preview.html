@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImagePulse - Find niches with real demand</title>
+<style>
+  :root {
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --bg: #0f172a;
+    --bg-grad: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+    --text: #f8fafc;
+    --text-2: #94a3b8;
+    --accent: #8b5cf6;
+    --accent-2: #c084fc;
+    --glass: rgba(255,255,255,0.03);
+    --glass-border: rgba(255,255,255,0.1);
+    --radius: 24px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: var(--font);
+    background-color: var(--bg);
+    background-image: var(--bg-grad);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 72px 0; }
+  h1, h2, h3 { font-weight: 700; letter-spacing: -0.025em; line-height: 1.2; }
+  h2 { font-size: 2rem; margin-bottom: 12px; text-align: center; }
+  .sub { color: var(--text-2); text-align: center; max-width: 640px; margin: 0 auto 40px; }
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 28px;
+  }
+  .grid { display: grid; gap: 20px; }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .g4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .card h3 { font-size: 1.1rem; margin-bottom: 8px; }
+  .card p { color: var(--text-2); font-size: 0.95rem; }
+
+  /* Hero */
+  .hero { padding: 96px 0 80px; text-align: center; }
+  .eyebrow {
+    display: inline-block; font-size: 0.85rem; font-weight: 600;
+    color: var(--accent-2); border: 1px solid rgba(192,132,252,0.35);
+    border-radius: 999px; padding: 6px 16px; margin-bottom: 24px;
+    background: rgba(139,92,246,0.08);
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    background: linear-gradient(to right, #fff, var(--accent-2));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 20px; max-width: 820px; margin-left: auto; margin-right: auto;
+  }
+  .hero .lead { color: var(--text-2); max-width: 700px; margin: 0 auto 32px; font-size: 1.1rem; }
+  .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .btn {
+    display: inline-block; padding: 13px 30px; border-radius: 12px;
+    font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; box-shadow: 0 8px 24px rgba(139,92,246,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-ghost { border: 1px solid var(--glass-border); color: var(--text); background: var(--glass); }
+  .trust { color: var(--text-2); font-size: 0.9rem; }
+
+  /* How it works */
+  .step-num {
+    width: 34px; height: 34px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    margin-bottom: 14px; font-size: 0.95rem;
+  }
+  .wrapline { text-align: center; color: var(--text-2); margin-top: 32px; font-size: 1rem; }
+
+  /* Pricing */
+  .tier { display: flex; flex-direction: column; position: relative; }
+  .tier .name { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+  .tier .price { font-size: 2rem; font-weight: 700; margin-bottom: 2px; }
+  .tier .price span { font-size: 0.9rem; color: var(--text-2); font-weight: 400; }
+  .tier .runs { color: var(--accent-2); font-weight: 600; font-size: 0.95rem; margin-bottom: 16px; }
+  .tier ul { list-style: none; flex: 1; }
+  .tier li { color: var(--text-2); font-size: 0.9rem; padding: 5px 0 5px 24px; position: relative; }
+  .tier li::before { content: "✓"; position: absolute; left: 0; color: var(--accent-2); }
+  .tier .btn { margin-top: 20px; text-align: center; }
+  .tier.popular { border-color: var(--accent); box-shadow: 0 0 40px rgba(139,92,246,0.25); }
+  .badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    font-size: 0.75rem; font-weight: 700; padding: 4px 14px; border-radius: 999px;
+  }
+  .tier.teaser { opacity: 0.65; border-style: dashed; }
+  .tier.teaser li::before { content: "•"; }
+  .foot-note { text-align: center; color: var(--text-2); font-size: 0.9rem; margin-top: 28px; }
+  .foot-note strong { color: var(--text); }
+
+  /* Roadmap + FAQ */
+  .road li { padding: 8px 0 8px 26px; position: relative; color: var(--text-2); }
+  .road li::before { content: "→"; position: absolute; left: 0; color: var(--accent-2); }
+  .road li strong { color: var(--text); }
+  details {
+    border: 1px solid var(--glass-border); border-radius: 14px;
+    background: var(--glass); padding: 16px 20px; margin-bottom: 12px;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { color: var(--text-2); margin-top: 10px; font-size: 0.95rem; }
+
+  footer {
+    border-top: 1px solid var(--glass-border); padding: 36px 0; text-align: center;
+    color: var(--text-2); font-size: 0.9rem;
+  }
+  footer a { color: var(--text-2); text-decoration: none; margin: 0 10px; }
+  footer a:hover { color: var(--accent-2); }
+
+  /* Preview-only notes boxes (not part of the real page) */
+  .notes-box {
+    border: 1px dashed rgba(192,132,252,0.45);
+    border-radius: 12px; background: rgba(139,92,246,0.06);
+    padding: 12px 16px; margin: 40px auto 0; max-width: 1032px;
+  }
+  .notes-box label {
+    font-size: 0.72rem; color: var(--accent-2); font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; display: block; margin-bottom: 4px;
+  }
+  .notes-box textarea {
+    width: 100%; min-height: 42px; background: transparent; border: none; resize: vertical;
+    color: var(--text); font-family: var(--font); font-size: 0.9rem; outline: none;
+  }
+  #copyNotes {
+    position: fixed; bottom: 20px; right: 20px; z-index: 10;
+    border: none; font-family: var(--font);
+  }
+</style>
+</head>
+<body>
+
+<section class="hero wrap">
+  <div class="eyebrow">POD trend research, rebuilt on real data</div>
+  <h1>Find niches with real demand. Get the prompts to fill them.</h1>
+  <p class="lead">ImagePulse turns one seed idea into ranked micro-niches, then builds the whole package:
+  image prompts in your art style, 13 Etsy-ready tags, title options, and a trademark check with the
+  evidence shown (informational, not legal advice). Real search data, not made-up numbers.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="#pricing">Start free</a>
+    <a class="btn btn-ghost" href="#pricing">See pricing</a>
+  </div>
+  <p class="trust">3 free runs every month. No credit card. Bring your own AI key and typically pay cents per run, never a markup.</p>
+  <div class="notes-box" data-sec="Hero" style="text-align:left;">
+    <label>Red's notes: hero (preview only, not on the real page)</label>
+    <textarea placeholder="Wording or look changes for this section..."></textarea>
+  </div>
+</section>
+
+<section class="wrap" style="padding-top:0;">
+  <div class="glass" style="max-width:760px; margin:0 auto; text-align:center;">
+    <div style="aspect-ratio:16/9; border-radius:14px; border:1px dashed var(--glass-border); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; background:rgba(0,0,0,0.25); margin-bottom:14px;">
+      <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-size:1.5rem;">&#9654;</div>
+      <p style="font-size:0.9rem;">Video slot: one seed to a finished package, in about a minute</p>
+    </div>
+    <p style="font-size:0.95rem;">Watch a full run before you sign up for anything.</p>
+  </div>
+  <div class="notes-box" data-sec="Video">
+    <label>Red's notes: video (preview only)</label>
+    <textarea placeholder="Video ideas, length, what the run should show..."></textarea>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Most trend tools guess. Your shop can't afford it.</h2>
+  <p class="sub">Print-on-demand punishes bad bets. Three ways the usual tools set you up to lose:</p>
+  <div class="grid g3">
+    <div class="glass card">
+      <h3>Invented numbers</h3>
+      <p>Plenty of tools show "search volume" scores that an AI made up on the spot. You end up betting real
+      listing fees on fiction.</p>
+    </div>
+    <div class="glass card">
+      <h3>Trademark landmines</h3>
+      <p>One phrase with a live trademark behind it can cost you the listing or the whole shop. Most tools
+      never even check.</p>
+    </div>
+    <div class="glass card">
+      <h3>The blank prompt box</h3>
+      <p>Even with a good niche picked, you still stare at an empty prompt field. The gap between "good
+      niche" and "good image" is where most sellers stall out.</p>
+    </div>
+  </div>
+  <div class="notes-box" data-sec="Problem">
+    <label>Red's notes: problem section (preview only)</label>
+    <textarea placeholder="Wording or look changes for this section..."></textarea>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>One seed in. A finished package out.</h2>
+  <p class="sub">Three steps from idea to a listing-ready kit.</p>
+  <div class="grid g3">
+    <div class="glass card">
+      <div class="step-num">1</div>
+      <h3>Seed it</h3>
+      <p>Type one idea. "Cottagecore cats." "Retro camping." Anything.</p>
+    </div>
+    <div class="glass card">
+      <div class="step-num">2</div>
+      <h3>Pick your lane</h3>
+      <p>Get 10 micro-niches built around your seed, ranked with real keyword data so you can see demand
+      before you commit.</p>
+    </div>
+    <div class="glass card">
+      <div class="step-num">3</div>
+      <h3>Grab the package</h3>
+      <p>One click builds the whole kit: 3 detailed image prompts in the art style you choose, a tailored
+      negative prompt, 13 Etsy-ready tags, title options, and a trademark check with the reasoning shown
+      (informational, not legal advice).</p>
+    </div>
+  </div>
+  <p class="wrapline">From there it's paste, generate, list. Every package auto-saves to your History,
+  and favorites keep the best niches one click away.</p>
+  <div class="notes-box" data-sec="How it works">
+    <label>Red's notes: how it works (preview only)</label>
+    <textarea placeholder="Wording or look changes for this section..."></textarea>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Built different where it counts.</h2>
+  <p class="sub">The parts other tools skip are the parts that protect your time and your shop.</p>
+  <div class="grid g4">
+    <div class="glass card">
+      <h3>Real numbers, or labeled estimates</h3>
+      <p>If a number on your screen can't be traced to real search data, we mark it as an estimate. We would
+      rather show you less data than made-up data.</p>
+    </div>
+    <div class="glass card">
+      <h3>A trademark check with receipts</h3>
+      <p>Risky phrases get flagged with the evidence shown, so you can judge with open eyes before you invest
+      hours in a design. It's informational, not legal advice, and it beats a takedown notice.</p>
+    </div>
+    <div class="glass card">
+      <h3>Bring your own key. Pay actual cost.</h3>
+      <p>Your Google Gemini key powers the AI. You pay Google's real prices, typically cents per run, with
+      zero markup from us. Your key is encrypted at rest and never logged.</p>
+    </div>
+    <div class="glass card">
+      <h3>Every feature, every tier</h3>
+      <p>Tiers change how many runs you get, never which features you get. The free tier runs the exact same
+      workflow as Pro.</p>
+    </div>
+  </div>
+  <div class="notes-box" data-sec="Differentiators">
+    <label>Red's notes: differentiators (preview only)</label>
+    <textarea placeholder="Wording or look changes for this section..."></textarea>
+  </div>
+</section>
+
+<section class="wrap" id="pricing">
+  <h2>Simple tiers. Every feature, every tier.</h2>
+  <p class="sub">Pick by volume, top up when a good week hits. Full workflow on all of them.</p>
+  <div class="grid g4">
+    <div class="glass tier">
+      <div class="name">Free</div>
+      <div class="price">$0</div>
+      <div class="runs">3 runs / month</div>
+      <ul>
+        <li>Full workflow, nothing locked</li>
+        <li>Real search data, estimates labeled</li>
+        <li>Trademark check</li>
+        <li>Art styles + negative prompts</li>
+        <li>Favorites, packages, history</li>
+        <li>Buy extra runs anytime</li>
+      </ul>
+      <a class="btn btn-ghost" href="#">Start free</a>
+    </div>
+    <div class="glass tier">
+      <div class="name">Starter</div>
+      <div class="price">$9<span>/mo</span></div>
+      <div class="runs">25 runs / month</div>
+      <ul>
+        <li>Everything in Free</li>
+        <li>Room to test niches weekly</li>
+        <li>Buy extra runs anytime</li>
+      </ul>
+      <a class="btn btn-ghost" href="#">Choose Starter</a>
+    </div>
+    <div class="glass tier popular">
+      <div class="badge">Most popular</div>
+      <div class="name">Pro</div>
+      <div class="price">$19<span>/mo</span></div>
+      <div class="runs">100 runs / month</div>
+      <ul>
+        <li>Everything in Free</li>
+        <li>Volume for daily listing work</li>
+        <li>Buy extra runs anytime</li>
+      </ul>
+      <a class="btn btn-primary" href="#">Choose Pro</a>
+    </div>
+    <div class="glass tier teaser">
+      <div class="name">Studio</div>
+      <div class="price">TBA</div>
+      <div class="runs">Coming later</div>
+      <ul>
+        <li>Built-in image generation</li>
+        <li>Multiple generators</li>
+        <li>Credits included</li>
+      </ul>
+      <a class="btn btn-ghost" href="#">Join the waitlist</a>
+    </div>
+  </div>
+  <p class="foot-note"><strong>Out of runs?</strong> Add 20 more for $5, on any tier, no upgrade required.<br>
+  One run takes a niche from idea to a complete package: micro-niches, prompts, tags, titles, and the
+  trademark check, all included.</p>
+  <div class="notes-box" data-sec="Pricing">
+    <label>Red's notes: pricing (preview only)</label>
+    <textarea placeholder="Tier names, numbers, layout, what's missing..."></textarea>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Questions, answered straight.</h2>
+  <div style="max-width:760px; margin: 32px auto 0;">
+    <details>
+      <summary>What counts as a run?</summary>
+      <p>One full trip through the workflow: your seed becomes ranked micro-niches, and one niche becomes a
+      complete package (image prompts, negative prompt, 13 tags, titles, trademark check). Browsing your
+      history and favorites never costs runs.</p>
+    </details>
+    <details>
+      <summary>What does "bring your own key" mean, and what does it cost me?</summary>
+      <p>You connect your own Google Gemini API key (free to create at Google AI Studio). The AI calls bill
+      to you at Google's actual prices, which usually works out to cents per run. We never see a markup on
+      your AI usage, and your key is stored encrypted and never logged.</p>
+    </details>
+    <details>
+      <summary>Is the trademark check legal advice?</summary>
+      <p>No. It flags risky phrases and shows you the reasoning so you can make an informed call, and it can
+      miss things. For anything high-stakes, talk to a trademark attorney.</p>
+    </details>
+    <details>
+      <summary>Which image generators do the prompts work with?</summary>
+      <p>Any generator you can type a prompt into: Midjourney, DALL-E, Ideogram, Nano Banana, and the rest.
+      Per-generator prompt tailoring is on the roadmap.</p>
+    </details>
+    <details>
+      <summary>Which marketplaces is this built for?</summary>
+      <p>Etsy first: 13-tag sets, Etsy-length titles, Etsy-shaped SEO. The niche research and prompts carry
+      straight over to Amazon Merch or Redbubble; you'll adapt the tags and keywords to each platform's own
+      format.</p>
+    </details>
+    <details>
+      <summary>Do unused runs roll over?</summary>
+      <p>Monthly runs reset each billing cycle. Purchased top-up runs never expire.</p>
+    </details>
+    <details>
+      <summary>Can I cancel anytime?</summary>
+      <p>Yes. You keep access through the end of the period you paid for.</p>
+    </details>
+  </div>
+  <div class="notes-box" data-sec="FAQ">
+    <label>Red's notes: FAQ (preview only)</label>
+    <textarea placeholder="Questions to add or cut, wording changes..."></textarea>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>On the bench next.</h2>
+  <div class="glass" style="max-width:760px; margin: 32px auto 0;">
+    <ul class="road" style="list-style:none;">
+      <li><strong>Listing builder.</strong> Build the Etsy listing itself: edit every field in place, copy
+      per field, and track it from draft to live.</li>
+      <li><strong>Per-generator prompts.</strong> The same package, tuned to Midjourney, DALL-E, or Ideogram
+      syntax with one dropdown.</li>
+      <li><strong>Studio tier.</strong> Generate images inside ImagePulse with credits included, across
+      multiple generators.</li>
+      <li><strong>Store connectors.</strong> Push finished products to Printify with your own token.</li>
+    </ul>
+  </div>
+  <div class="notes-box" data-sec="Roadmap">
+    <label>Red's notes: roadmap (preview only)</label>
+    <textarea placeholder="Wording or look changes for this section..."></textarea>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Made for POD sellers who are tired of guessing.</p>
+    <p style="margin-top:10px;">ImagePulse &nbsp;·&nbsp; <a href="#">Terms</a> <a href="#">Privacy</a> <a href="#">Support</a></p>
+    <div class="notes-box" data-sec="Overall look and feel" style="text-align:left;">
+      <label>Red's notes: overall look &amp; feel (preview only)</label>
+      <textarea placeholder="Big-picture direction: palette, vibe, Vault inspiration to pull, what feels off..."></textarea>
+    </div>
+  </div>
+</footer>
+
+<button id="copyNotes" class="btn btn-primary">Copy notes for Claude</button>
+
+<script>
+  document.querySelectorAll('.notes-box textarea').forEach(function (t) {
+    var key = 'ip-landing-notes-' + t.closest('.notes-box').dataset.sec;
+    try { t.value = localStorage.getItem(key) || ''; } catch (e) {}
+    t.addEventListener('input', function () {
+      try { localStorage.setItem(key, t.value); } catch (e) {}
+    });
+  });
+  document.getElementById('copyNotes').addEventListener('click', function () {
+    var out = '# Landing page notes (from landing-preview.html)\n';
+    var any = false;
+    document.querySelectorAll('.notes-box').forEach(function (b) {
+      var v = b.querySelector('textarea').value.trim();
+      if (v) { any = true; out += '\n## ' + b.dataset.sec + '\n' + v + '\n'; }
+    });
+    if (!any) { alert('No notes written yet.'); return; }
+    var done = function () {
+      var btn = document.getElementById('copyNotes');
+      btn.textContent = 'Copied! Paste to Claude';
+      setTimeout(function () { btn.textContent = 'Copy notes for Claude'; }, 2500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(out).then(done, function () { fallbackCopy(out); done(); });
+    } else { fallbackCopy(out); done(); }
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); ta.remove();
+    }
+  });
+</script>
+
+</body>
+</html>
