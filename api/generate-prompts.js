@@ -1,16 +1,24 @@
 import ai from './_lib/gemini.js';
 import db from './_lib/db.js';
+import { requireUser } from './_lib/auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { title, keywords, productType = 'T-Shirt', style = '' } = req.body;
+  const user = await requireUser(req, res);
+  if (!user) return;
+
+  const { title, keywords: rawKeywords, productType = 'T-Shirt', style = '' } = req.body || {};
+  if (!title) {
+    return res.status(400).json({ error: 'title is required' });
+  }
+  const keywords = Array.isArray(rawKeywords) ? rawKeywords : [];
   const artStyle = (style || '').trim();
 
   if (!ai) {
-    return res.status(401).json({ error: 'Gemini API key is not configured on the server. Please add GEMINI_API_KEY to server/.env' });
+    return res.status(500).json({ error: 'Gemini API key is not configured on the server. Set GEMINI_API_KEY in the environment (root .env for vercel dev, Vercel project env vars once deployed).' });
   }
 
   try {
@@ -126,8 +134,9 @@ export default async function handler(req, res) {
     // Auto-log every generated package to History (distinct from manually-saved packages).
     try {
       await db.query(
-        'INSERT INTO generation_history (trend_title, product_type, prompts, tags, titles) VALUES ($1, $2, $3, $4, $5)',
+        'INSERT INTO generation_history (user_id, trend_title, product_type, prompts, tags, titles) VALUES ($1, $2, $3, $4, $5, $6)',
         [
+          user.id,
           title,
           productType,
           JSON.stringify(generatedData.prompts),

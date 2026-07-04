@@ -1,11 +1,16 @@
 import db from '../_lib/db.js';
+import { requireUser } from '../_lib/auth.js';
 
 export default async function handler(req, res) {
+  const user = await requireUser(req, res);
+  if (!user) return;
+
   if (req.method === 'GET') {
     try {
       // jsonb columns come back as parsed arrays; no JSON.parse step needed.
       const { rows } = await db.query(
-        'SELECT id, trend_title, product_type, prompts, tags, titles, created_at FROM favorite_packages ORDER BY created_at DESC'
+        'SELECT id, trend_title, product_type, prompts, tags, titles, created_at FROM favorite_packages WHERE user_id = $1 ORDER BY created_at DESC',
+        [user.id]
       );
       res.json(rows);
     } catch (error) {
@@ -16,11 +21,14 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { trend_title, product_type, generatedData } = req.body;
+    const { trend_title, product_type, generatedData } = req.body || {};
+    if (!trend_title || !generatedData) {
+      return res.status(400).json({ error: 'trend_title and generatedData are required' });
+    }
     try {
       await db.query(
-        'INSERT INTO favorite_packages (trend_title, product_type, prompts, tags, titles) VALUES ($1, $2, $3, $4, $5)',
-        [trend_title, product_type, JSON.stringify(generatedData.prompts), JSON.stringify(generatedData.tags), JSON.stringify(generatedData.titles)]
+        'INSERT INTO favorite_packages (user_id, trend_title, product_type, prompts, tags, titles) VALUES ($1, $2, $3, $4, $5, $6)',
+        [user.id, trend_title, product_type, JSON.stringify(generatedData.prompts || []), JSON.stringify(generatedData.tags || []), JSON.stringify(generatedData.titles || [])]
       );
       res.json({ success: true });
     } catch (error) {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Clock, Copy, CheckCircle, Trash2 } from 'lucide-react';
+import { apiFetch } from '../lib/api.js';
 
 export function History() {
   const [history, setHistory] = useState([]);
@@ -7,7 +8,7 @@ export function History() {
   const [copiedKey, setCopiedKey] = useState(null);
 
   const fetchHistory = () => {
-    fetch('/api/history')
+    apiFetch('/api/history')
       .then(res => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -34,7 +35,7 @@ export function History() {
 
   const deleteEntry = async (id) => {
     try {
-      await fetch(`/api/history/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/history/${id}`, { method: 'DELETE' });
       setHistory(prev => prev.filter(item => item.id !== id));
     } catch (err) {
       console.error('Failed to delete history entry:', err);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { TrendCard } from './TrendCard';
 import { PromptGenerator } from './PromptGenerator';
 import { Search, TrendingUp, Sparkles, AlertCircle, Loader2, Zap } from 'lucide-react';
+import { apiFetch } from '../lib/api.js';
 
 export function Dashboard() {
   const [selectedTrend, setSelectedTrend] = useState(null);
@@ -17,14 +18,14 @@ export function Dashboard() {
   const [selectedPackage, setSelectedPackage] = useState(null);
 
   const fetchFavorites = () => {
-    fetch('/api/favorites')
+    apiFetch('/api/favorites')
       .then(res => res.json())
       .then(data => setFavorites(data))
       .catch(err => console.error('Failed to fetch favorites:', err));
   };
 
   const fetchFavoritePackages = () => {
-    fetch('/api/favorite-packages')
+    apiFetch('/api/favorite-packages')
       .then(res => res.json())
       .then(data => setFavoritePackages(data))
       .catch(err => console.error('Failed to fetch favorite packages:', err));
@@ -34,7 +35,7 @@ export function Dashboard() {
     setLoading(true);
     setError(null);
     setSelectedTrend(null);
-    fetch(`/api/trends?seed=${encodeURIComponent(seed)}`)
+    apiFetch(`/api/trends?seed=${encodeURIComponent(seed)}`)
       .then(res => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -64,9 +65,9 @@ export function Dashboard() {
   const handleToggleFavorite = async (trend) => {
     const isFav = favorites.some(f => f.title === trend.title);
     if (isFav) {
-      await fetch(`/api/favorites/${encodeURIComponent(trend.title)}`, { method: 'DELETE' });
+      await apiFetch(`/api/favorites/${encodeURIComponent(trend.title)}`, { method: 'DELETE' });
     } else {
-      await fetch('/api/favorites', {
+      await apiFetch('/api/favorites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(trend)

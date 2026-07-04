@@ -1,11 +1,15 @@
 import ai from './_lib/gemini.js';
+import { requireUser } from './_lib/auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { context = '', title = '', style = '' } = req.body;
+  const user = await requireUser(req, res);
+  if (!user) return;
+
+  const { context = '', title = '', style = '' } = req.body || {};
   const notes = (context || '').trim();
 
   if (!notes) {
@@ -13,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   if (!ai) {
-    return res.status(401).json({ error: 'Gemini API key is not configured on the server. Please add GEMINI_API_KEY to server/.env' });
+    return res.status(500).json({ error: 'Gemini API key is not configured on the server. Set GEMINI_API_KEY in the environment (root .env for vercel dev, Vercel project env vars once deployed).' });
   }
 
   try {

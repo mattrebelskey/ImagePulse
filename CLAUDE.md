@@ -9,19 +9,23 @@ Started in Google Antigravity, migrated to Claude Code 2026-07-02. This clone at
 - **Frontend:** React 19 + Vite 8 (plain JSX, no TypeScript). Inline styles + `src/index.css` (glassmorphism dark theme). Icons via `lucide-react`.
 - **Backend:** Vercel serverless functions in `api/` (plain JS, ESM — root package.json is `"type": "module"`). One file per endpoint (Vercel file-based routing); shared helpers in `api/_lib/` (underscore dirs are not exposed as routes). The old Express 5 server (`server/index.js`, CommonJS) still works as a legacy fallback and gets deleted in Session 5.
 - **Database:** Supabase Postgres (project `nnyhwhirdtvgdwsbuhnt`, us-east-2) via `pg` over the transaction pooler, TLS pinned to `server/supabase-ca.crt`. Schema lives in `supabase/migrations/` (applied with `npx supabase db push --linked`); `api/_lib/db.js` exports the Pool (the legacy Express copy is `server/db.js`). Connection string `SUPABASE_DB_URL` in root `.env` for `vercel dev` and in `server/.env` for the legacy server (both gitignored). The old SQLite file `server/imagepulse.db` is archival only (ported 2026-07-03; the one-time migration script was deleted in Session 2 — recover from commit `f6c1a04` if ever needed). `better-sqlite3` dropped 2026-07-03.
+- **Auth (Session 3):** Supabase Auth, email+password live (Google wired in UI but provider disabled pending Red's Google Cloud OAuth client). ES256 JWTs verified server-side in `api/_lib/auth.js` (`jose` + JWKS); every `api/` route requires `Authorization: Bearer <jwt>` and scopes queries `WHERE user_id = $n` — that WHERE clause IS tenancy enforcement, because the pooler connection is table owner and bypasses RLS. Frontend: `@supabase/supabase-js` for auth only (`src/lib/supabase.js`); all API calls go through `src/lib/api.js` `apiFetch`. Data API table grants are revoked; `byok_keys` has zero RLS policies on purpose.
 - **AI:** Google Gemini via `@google/genai` (`gemini-2.5-pro` with `gemini-2.5-flash` fallback, then hardcoded offline fallback). Trademark check uses Gemini Google Search grounding.
 - **Repo:** github.com/mattrebelskey/ImagePulse (public). Default branch `master`. Commit author: Matt Rebelskey <matt.rebelskey@gmail.com> (repo-local config).
 
 ## Run it (one terminal)
 
 ```
-# needs GEMINI_API_KEY at User scope + SUPABASE_DB_URL in root .env
+# needs GEMINI_API_KEY at User scope + root .env with SUPABASE_DB_URL,
+# SUPABASE_URL, VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY
 npm install && npx vercel dev              # frontend + api on http://localhost:3000
 ```
 
 Legacy two-terminal workflow still works (`cd server && npm start` + `npm run dev`; vite proxies `/api` to port 3000). Without `GEMINI_API_KEY`, `/api/trends` serves a 2-item fallback and `/api/generate-prompts` returns 401. Frontend fetches use relative `/api` paths.
 
 ## API surface (api/)
+
+All routes require a signed-in user (401 otherwise); rows are scoped to that user.
 
 - `GET /api/trends?seed=` - AI-generated micro-niches (or fallback). `api/trends.js`
 - `POST /api/generate-prompts` - trademark check, then 3 prompts + 13 tags + 2 titles; auto-logs to `generation_history`. `api/generate-prompts.js`

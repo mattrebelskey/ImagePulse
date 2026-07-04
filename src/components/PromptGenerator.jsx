@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Copy, Wand2, X, CheckCircle2, Tags, Type, Image as ImageIcon, Palette, Ban } from 'lucide-react';
+import { apiFetch } from '../lib/api.js';
 
 const ART_STYLES = [
   'Watercolor',
@@ -46,7 +47,7 @@ export function PromptGenerator({ trend, onClose, initialData }) {
     setIsGenerating(true);
     
     try {
-      const response = await fetch('/api/generate-prompts', {
+      const response = await apiFetch('/api/generate-prompts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -92,7 +93,7 @@ export function PromptGenerator({ trend, onClose, initialData }) {
   const savePackage = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch('/api/favorite-packages', {
+      const res = await apiFetch('/api/favorite-packages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,7 +117,7 @@ export function PromptGenerator({ trend, onClose, initialData }) {
     setNegError(null);
     setIsGeneratingNeg(true);
     try {
-      const res = await fetch('/api/negative-prompt', {
+      const res = await apiFetch('/api/negative-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
