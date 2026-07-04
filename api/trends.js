@@ -1,4 +1,4 @@
-import ai from './_lib/gemini.js';
+import { getGeminiForUser } from './_lib/gemini.js';
 import { requireUser } from './_lib/auth.js';
 
 export default async function handler(req, res) {
@@ -6,11 +6,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // No DB access here, but generation burns the house Gemini key — signed-in only.
+  // Generation burns a Gemini key (the user's BYOK key when stored, house
+  // key otherwise) — signed-in only.
   const user = await requireUser(req, res);
   if (!user) return;
 
   try {
+    const { ai } = await getGeminiForUser(user.id);
     const seed = req.query.seed || 'General Print on Demand';
 
     if (!ai) {

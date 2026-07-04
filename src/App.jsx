@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { LogOut, Loader2 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { History } from './components/History';
+import { Settings } from './components/Settings';
 import { AuthScreen } from './components/AuthScreen';
 import { supabase } from './lib/supabase.js';
 
@@ -71,11 +72,23 @@ function App() {
           >
             History
           </button>
+          <button
+            className="btn"
+            style={{
+              background: activeTab === 'settings' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)',
+              color: activeTab === 'settings' ? 'black' : 'white'
+            }}
+            onClick={() => setActiveTab('settings')}
+          >
+            Settings
+          </button>
         </div>
       </header>
 
       <main>
-        {activeTab === 'dashboard' ? <Dashboard /> : <History />}
+        {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'history' && <History />}
+        {activeTab === 'settings' && <Settings />}
       </main>
     </div>
   );

@@ -11,13 +11,14 @@ Started in Google Antigravity, migrated to Claude Code 2026-07-02. This clone at
 - **Database:** Supabase Postgres (project `nnyhwhirdtvgdwsbuhnt`, us-east-2) via `pg` over the transaction pooler, TLS pinned to `server/supabase-ca.crt`. Schema lives in `supabase/migrations/` (applied with `npx supabase db push --linked`); `api/_lib/db.js` exports the Pool (the legacy Express copy is `server/db.js`). Connection string `SUPABASE_DB_URL` in root `.env` for `vercel dev` and in `server/.env` for the legacy server (both gitignored). The old SQLite file `server/imagepulse.db` is archival only (ported 2026-07-03; the one-time migration script was deleted in Session 2 — recover from commit `f6c1a04` if ever needed). `better-sqlite3` dropped 2026-07-03.
 - **Auth (Session 3):** Supabase Auth, email+password live (Google wired in UI but provider disabled pending Red's Google Cloud OAuth client). ES256 JWTs verified server-side in `api/_lib/auth.js` (`jose` + JWKS); every `api/` route requires `Authorization: Bearer <jwt>` and scopes queries `WHERE user_id = $n` — that WHERE clause IS tenancy enforcement, because the pooler connection is table owner and bypasses RLS. Frontend: `@supabase/supabase-js` for auth only (`src/lib/supabase.js`); all API calls go through `src/lib/api.js` `apiFetch`. Data API table grants are revoked; `byok_keys` has zero RLS policies on purpose.
 - **AI:** Google Gemini via `@google/genai` (`gemini-2.5-pro` with `gemini-2.5-flash` fallback, then hardcoded offline fallback). Trademark check uses Gemini Google Search grounding.
+- **BYOK (Session 4):** generation runs on the signed-in user's stored Gemini key when one exists (Settings tab → `api/byok-keys` → AES-256-GCM at rest via server-only `BYOK_MASTER_KEY`), house `GEMINI_API_KEY` only for users with no stored key (Milestone A dogfood policy; Milestone B flips to user-key-required). A stored key is authoritative — never silently fall back to the house key. Key-per-provider: `api/_lib/providers.js` is the server registry (validation pings), `PROVIDER_INFO` in `src/components/Settings.jsx` the UI mirror; a new generator is one entry in each. Plaintext keys must never be logged, echoed back (last4 only), or cached beyond the request.
 - **Repo:** github.com/mattrebelskey/ImagePulse (public). Default branch `master`. Commit author: Matt Rebelskey <matt.rebelskey@gmail.com> (repo-local config).
 
 ## Run it (one terminal)
 
 ```
 # needs GEMINI_API_KEY at User scope + root .env with SUPABASE_DB_URL,
-# SUPABASE_URL, VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY
+# SUPABASE_URL, VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, BYOK_MASTER_KEY
 npm install && npx vercel dev              # frontend + api on http://localhost:3000
 ```
 
@@ -33,6 +34,8 @@ All routes require a signed-in user (401 otherwise); rows are scoped to that use
 - `GET/POST/DELETE /api/favorites` - saved niches (`favorite_niches`). `api/favorites/index.js` + `api/favorites/[title].js`
 - `GET/POST/DELETE /api/favorite-packages` - manually saved packages (`favorite_packages`). `api/favorite-packages/index.js` + `api/favorite-packages/[id].js`
 - `GET/DELETE /api/history` - auto-logged generations (`generation_history`), read by the History tab. `api/history/index.js` + `api/history/[id].js`
+- `GET/POST /api/byok-keys` - list saved provider keys (last4 + validated_at only) / validate + encrypt + save a key. `api/byok-keys/index.js`
+- `DELETE /api/byok-keys/[provider]` - remove the caller's key for that provider. `api/byok-keys/[provider].js`
 
 ## No-touch rules
 

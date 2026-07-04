@@ -1,4 +1,4 @@
-import ai from './_lib/gemini.js';
+import { getGeminiForUser } from './_lib/gemini.js';
 import db from './_lib/db.js';
 import { requireUser } from './_lib/auth.js';
 
@@ -17,8 +17,15 @@ export default async function handler(req, res) {
   const keywords = Array.isArray(rawKeywords) ? rawKeywords : [];
   const artStyle = (style || '').trim();
 
+  let ai;
+  try {
+    ({ ai } = await getGeminiForUser(user.id));
+  } catch (error) {
+    console.error('Failed to load the Gemini key for this user:', error.message);
+    return res.status(500).json({ error: 'Failed to load your API key settings. Please try again.' });
+  }
   if (!ai) {
-    return res.status(500).json({ error: 'Gemini API key is not configured on the server. Set GEMINI_API_KEY in the environment (root .env for vercel dev, Vercel project env vars once deployed).' });
+    return res.status(500).json({ error: 'No Gemini API key is available. Add your key on the Settings page (or set GEMINI_API_KEY on the server).' });
   }
 
   try {
